@@ -1,0 +1,11 @@
+LIBRARY ddraw
+EXPORTS
+    DirectDrawCreateEx
+    DirectDrawEnumerateExA
+    DirectDrawEnumerateA
+    DirectDrawCreate
+    DirectDrawCreateClipper
+    DllCanUnloadNow PRIVATE
+    DllGetClassObject PRIVATE
+    NvOptimusEnablement DATA
+    AmdPowerXpressRequestHighPerformance DATA

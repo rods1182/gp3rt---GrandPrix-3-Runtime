@@ -1,0 +1,12 @@
+LIBRARY ntdll.dll
+EXPORTS
+_alldiv
+_allmul
+_allrem
+_allshl
+_allshr
+_aulldiv
+_aullrem
+_aullshr
+_alldvrm
+_aulldvrm

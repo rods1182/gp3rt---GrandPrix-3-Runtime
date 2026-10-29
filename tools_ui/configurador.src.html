@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GP3RT Configurador</title>
+<style>
+:root {
+  --bg: #121417; --panel: #1b1f24; --panel2: #232830; --line: #2f353e;
+  --text: #e9edf2; --muted: #9aa4b1; --accent: #e10600; --accent2: #ff3b30;
+  --ok: #2fbf71; --warn: #f5a524; --chip: #2a3039; --chipon: #e10600; --chipontext: #fff;
+  --shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eef1f5; --panel: #ffffff; --panel2: #f6f8fb; --line: #d9dee6;
+    --text: #15191e; --muted: #5d6773; --chip: #e9edf3; --shadow: 0 6px 18px rgba(20,30,50,.10);
+  }
+}
+:root[data-theme="light"] {
+  --bg: #eef1f5; --panel: #ffffff; --panel2: #f6f8fb; --line: #d9dee6;
+  --text: #15191e; --muted: #5d6773; --chip: #e9edf3; --shadow: 0 6px 18px rgba(20,30,50,.10);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+.flag { height: 10px; background:
+  repeating-linear-gradient(90deg, #fff 0 10px, #111 10px 20px); opacity: .9; }
+.flag2 { height: 10px; background:
+  repeating-linear-gradient(90deg, #111 0 10px, #fff 10px 20px); opacity: .9; }
+header { background: linear-gradient(120deg, #0d0f12 0%, #1a1d22 60%, #3a0402 100%); color: #fff; }
+.hwrap { max-width: 1000px; margin: 0 auto; padding: 22px 16px 18px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.logo { font-weight: 800; font-style: italic; font-size: 30px; letter-spacing: -.5px; line-height: 1; }
+.logo span { color: var(--accent2); }
+.sub { color: #c6ccd4; font-size: 13.5px; }
+.grow { flex: 1; min-width: 200px; }
+.lang { display: flex; gap: 6px; }
+.lang button { background: transparent; border: 1px solid #555; color: #ddd; border-radius: 6px; padding: 4px 9px; cursor: pointer; font-weight: 600; }
+.lang button.on { background: #fff; color: #111; border-color: #fff; }
+main { max-width: 1000px; margin: 0 auto; padding: 18px 16px 120px; }
+.bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
+.btn { border: 0; border-radius: 9px; padding: 10px 16px; font-weight: 700; cursor: pointer; font-size: 14.5px;
+  background: var(--chip); color: var(--text); }
+.btn:hover { filter: brightness(1.08); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.ghost { background: transparent; border: 1px solid var(--line); }
+.file { color: var(--muted); font-size: 13.5px; flex: 1; min-width: 160px; overflow-wrap: anywhere; }
+.file b { color: var(--text); }
+h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 26px 2px 10px; display: flex; align-items: center; gap: 10px; }
+h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.preset { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px;
+  cursor: pointer; color: var(--text); box-shadow: var(--shadow); transition: transform .08s, border-color .15s; }
+.preset:hover { transform: translateY(-1px); border-color: var(--accent); }
+.preset .pt { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.preset .pd { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 18px; padding: 14px 16px; border-top: 1px solid var(--line); align-items: center; }
+.row:first-child { border-top: 0; }
+.row .lbl { font-weight: 650; }
+.row .help { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.row .key { font-family: Consolas, "Cascadia Mono", monospace; font-size: 11.5px; color: var(--muted); opacity: .75; }
+@media (max-width: 680px) { .row { grid-template-columns: 1fr; } }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--chip); padding: 4px; border-radius: 10px; }
+.seg button { border: 0; background: transparent; color: var(--text); padding: 7px 12px; border-radius: 7px; cursor: pointer; font-weight: 650; font-size: 13.5px; }
+.seg button.on { background: var(--chipon); color: var(--chipontext); }
+.tog { position: relative; width: 52px; height: 28px; border-radius: 14px; background: var(--chip); border: 0; cursor: pointer; transition: background .15s; }
+.tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: left .15s; }
+.tog.on { background: var(--ok); }
+.tog.on::after { left: 27px; }
+.slider { display: flex; align-items: center; gap: 10px; min-width: 250px; }
+.slider input[type=range] { flex: 1; accent-color: var(--accent); }
+.slider output { min-width: 52px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.num { width: 86px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); font-size: 14px; }
+.wide { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+details.adv { margin-top: 0; }
+details.adv summary { cursor: pointer; padding: 14px 16px; font-weight: 700; list-style: none; }
+details.adv summary::before { content: "▸ "; color: var(--accent); }
+details.adv[open] summary::before { content: "▾ "; }
+.note { font-size: 13px; color: var(--muted); margin: 8px 4px 0; }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0,0,0,.25); }
+.dock .in { max-width: 1000px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.status { flex: 1; min-width: 180px; font-size: 13.5px; color: var(--muted); }
+.status.ok { color: var(--ok); } .status.warn { color: var(--warn); }
+pre.preview { margin: 0; padding: 14px 16px; max-height: 340px; overflow: auto; font: 12.5px/1.45 Consolas, "Cascadia Mono", monospace; background: var(--panel2); white-space: pre; }
+.badge { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 99px; background: var(--accent); color: #fff; letter-spacing: .04em; }
+footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="flag"></div><div class="flag2"></div>
+<header>
+  <div class="hwrap">
+    <div class="grow">
+      <div class="logo">GP3<span>RT</span> <span style="color:#fff;font-weight:600;font-style:normal;font-size:20px" data-t="title">Configurador</span></div>
+      <div class="sub" data-t="subtitle">Ajuste o gp3rt.ini do Grand Prix 3 / GP3 2000 sem editar texto.</div>
+    </div>
+    <div class="lang"><button id="lpt" class="on">PT</button><button id="len">EN</button></div>
+  </div>
+</header>
+
+<main>
+  <div class="bar">
+    <button class="btn primary" id="open" data-t="open">Abrir gp3rt.ini</button>
+    <div class="file" id="fileinfo"></div>
+  </div>
+  <p class="note" data-t="howto">Clique em “Abrir gp3rt.ini” e escolha o arquivo que está na pasta do jogo (ao lado do Gp3.exe). Mude o que quiser e clique em “Salvar”. Os comentários do arquivo são mantidos.</p>
+
+  <h2 data-t="h_presets">Perfis rápidos</h2>
+  <div class="presets" id="presets"></div>
+
+  <h2 data-t="h_video">Imagem e qualidade</h2>
+  <div class="card" id="c_video"></div>
+
+  <h2 data-t="h_wide">Widescreen</h2>
+  <div class="card" id="c_wide"></div>
+
+  <h2 data-t="h_screen">Tela e placa de vídeo</h2>
+  <div class="card" id="c_screen"></div>
+
+  <h2 data-t="h_rain">Chuva</h2>
+  <div class="card" id="c_rain"></div>
+
+  <h2 data-t="h_game">Jogo</h2>
+  <div class="card" id="c_game"></div>
+
+  <h2 data-t="h_adv">Avançado</h2>
+  <div class="card"><details class="adv"><summary data-t="adv_sum">Opções avançadas e diagnóstico (só mude se souber o que faz)</summary><div id="c_adv"></div></details></div>
+
+  <h2 data-t="h_preview">Arquivo que será salvo</h2>
+  <div class="card"><details class="adv"><summary data-t="prev_sum">Ver o gp3rt.ini</summary><pre class="preview" id="preview"></pre></details></div>
+
+  <footer data-t="footer">GP3RT — feito por um brasileiro nostálgico, com a ajuda do Claude. Este arquivo funciona sem internet.</footer>
+</main>
+
+<div class="dock"><div class="in">
+  <div class="status" id="status"></div>
+  <button class="btn ghost" id="defaults" data-t="defaults">Restaurar padrão</button>
+  <button class="btn primary" id="save" data-t="save">Salvar</button>
+</div></div>
+
+<input type="file" id="picker" accept=".ini,text/plain" style="display:none">
+
+<script>
+"use strict";
+const DEFAULT_INI = __DEFAULT_INI__;
+
+/* ---------- texts ---------- */
+const T = {
+pt: {
+  title: "Configurador", subtitle: "Ajuste o gp3rt.ini do Grand Prix 3 / GP3 2000 sem editar texto.",
+  open: "Abrir gp3rt.ini", save: "Salvar", defaults: "Restaurar padrão",
+  howto: "Clique em “Abrir gp3rt.ini” e escolha o arquivo que está na pasta do jogo (ao lado do Gp3.exe). Mude o que quiser e clique em “Salvar”. Os comentários do arquivo são mantidos.",
+  h_presets: "Perfis rápidos", h_video: "Imagem e qualidade", h_wide: "Widescreen", h_screen: "Tela e placa de vídeo",
+  h_rain: "Chuva", h_game: "Jogo", h_adv: "Avançado", h_preview: "Arquivo que será salvo",
+  adv_sum: "Opções avançadas e diagnóstico (só mude se souber o que faz)", prev_sum: "Ver o gp3rt.ini",
+  footer: "GP3RT — feito por um brasileiro nostálgico, com a ajuda do Claude. Este arquivo funciona sem internet.",
+  nofile: "Nenhum arquivo aberto — usando o gp3rt.ini padrão. “Salvar” vai baixar um gp3rt.ini novo para você copiar para a pasta do jogo.",
+  opened: f => `Aberto: <b>${f}</b>`,
+  st_clean: "Sem alterações.", st_dirty: "Alterações não salvas.",
+  st_saved: f => `Salvo em ${f}. Abra o jogo para usar.`, st_down: "gp3rt.ini baixado. Copie-o para a pasta do jogo, ao lado do Gp3.exe (substitua o antigo).",
+  st_preset: p => `Perfil “${p}” aplicado. Clique em Salvar.`, st_def: "Valores padrão restaurados. Clique em Salvar.",
+  st_err: "Não foi possível salvar aqui; o arquivo foi baixado em vez disso.",
+  auto: "Automático", on: "Ligado", off: "Desligado",
+  p_max: "Qualidade máxima", p_max_d: "4x e filtragem 16x. Para placas dedicadas fortes.",
+  p_bal: "Equilibrado", p_bal_d: "3x e 16x. Quase o mesmo visual, bem mais leve.",
+  p_light: "Leve / notebook fresco", p_light_d: "2x e 8x. Menos calor e ventoinha; ajuda em pistas pesadas.",
+  p_orig: "Visual original", p_orig_d: "1x, sem filtragem extra: como o GP3 era em 1999.",
+  internal_scale: ["Resolução interna do 3D", "Desenha o 3D maior e reduz para a tela (sem serrilhado). Automático = 4x na placa dedicada, 2x na integrada. Mais alto = mais bonito e mais pesado."],
+  anisotropy: ["Filtragem anisotrópica", "Deixa nítidas as texturas vistas de lado (asfalto ao longe). Automático = 16x na dedicada, 8x na integrada."],
+  force_filtering: ["Suavizar texturas", "Filtra as texturas mesmo quando o jogo pede pixels duros."],
+  vsync: ["Sincronia vertical (V-Sync)", "Sincroniza com o monitor: evita imagem rasgada. Recomendado."],
+  aspect: ["Proporção 4:3", "Em resoluções 4:3 numa tela larga: manter com faixas pretas ou esticar."],
+  wide_mode: ["Resolução widescreen", "Substitui a opção 1280x1024 do menu de gráficos do jogo. Escolha 1280x1024 no jogo para usá-la."],
+  w_desk: "Da área de trabalho", w_off: "Desligado", w_custom: "Personalizada",
+  hor_plus: ["Campo de visão Hor+", "Em tela larga mostra mais imagem dos lados, sem esticar nem cortar."],
+  fov_percent: ["Ajuste do campo de visão", "100% = padrão. Mais = mais aberto; menos = mais zoom. Vale para todas as câmeras."],
+  mode: ["Modo de tela", "Tela cheia não troca a resolução do monitor. Alt+Enter alterna durante o jogo."],
+  m_full: "Tela cheia", m_win: "Janela",
+  window_size: ["Tamanho da janela", "No modo janela: fica igual do menu à corrida; a imagem se encaixa dentro. Automático = 80% da tela."],
+  gpu: ["Placa de vídeo", "Em notebooks com duas placas. Automático usa a dedicada (NVIDIA/AMD)."],
+  g_ded: "Dedicada", g_int: "Integrada", g_sys: "Não mexer",
+  renderer: ["Desenho", "OpenGL usa a placa de vídeo (recomendado). Software usa o processador: lento, só para emergências."],
+  spray_opacity: ["Spray de água e fumaça", "100% = original do GP3. Valores menores evitam a “parede cinza” perto das câmeras de TV."],
+  spray_near_fade: ["Esmaecer spray colado na câmera", "Some com as nuvens de spray que passam encostadas na câmera."],
+  virtual_cd: ["CD virtual", "Dispensa CD, ISO ou montagem de imagem."],
+  directplay: ["DirectPlay (multiplayer em rede)", "Desligado evita atraso ou erro ao abrir o jogo."],
+  overlay_locks: ["Camada de carros e sombras na placa", "Grande ganho de desempenho. Desligue só para testes."],
+  lazy_readback: ["Leitura preguiçosa da imagem", "Lê a imagem de volta só quando preciso."],
+  exception_free: ["Modo sem exceções", "Automático liga quando há depurador (GPxPatch)."],
+  fast_exit: ["Saída rápida", "Evita o Gp3.exe ficar preso em segundo plano ao sair."],
+  close_leftover_instances: ["Fechar Gp3.exe esquecido", "Ao abrir, fecha uma execução anterior que ficou presa."],
+  keep_cpu_affinity: ["Manter a opção CPU do GPxPatch", "Desligado (recomendado): devolve todos os núcleos ao jogo. Com CPU=0 do GPxPatch, mouse e teclado travam."],
+  avoid_exclusive_fullscreen: ["Evitar tela cheia exclusiva (NVIDIA)", "Mantém Alt+Tab e Alt+Enter funcionando bem."],
+  log_level: ["Detalhe do gp3rt.log", "0 = só erros, 1 = normal, 2 = detalhado."],
+  frame_dump: ["Diagnóstico Ctrl+F11", "Salva tudo o que foi desenhado num quadro, para relatar defeitos gráficos."],
+},
+en: {
+  title: "Configurator", subtitle: "Adjust Grand Prix 3 / GP3 2000's gp3rt.ini without editing text.",
+  open: "Open gp3rt.ini", save: "Save", defaults: "Restore defaults",
+  howto: "Click “Open gp3rt.ini” and pick the file in the game folder (next to Gp3.exe). Change what you like and click “Save”. The file's comments are kept.",
+  h_presets: "Quick profiles", h_video: "Picture and quality", h_wide: "Widescreen", h_screen: "Screen and graphics card",
+  h_rain: "Rain", h_game: "Game", h_adv: "Advanced", h_preview: "File to be saved",
+  adv_sum: "Advanced options and diagnostics (change only if you know what they do)", prev_sum: "Show gp3rt.ini",
+  footer: "GP3RT — made by a nostalgic Brazilian, with help from Claude. This file works offline.",
+  nofile: "No file opened — using the default gp3rt.ini. “Save” will download a new gp3rt.ini for you to copy into the game folder.",
+  opened: f => `Opened: <b>${f}</b>`,
+  st_clean: "No changes.", st_dirty: "Unsaved changes.",
+  st_saved: f => `Saved to ${f}. Start the game to use it.`, st_down: "gp3rt.ini downloaded. Copy it into the game folder, next to Gp3.exe (replace the old one).",
+  st_preset: p => `Profile “${p}” applied. Click Save.`, st_def: "Defaults restored. Click Save.",
+  st_err: "Could not save in place; the file was downloaded instead.",
+  auto: "Auto", on: "On", off: "Off",
+  p_max: "Maximum quality", p_max_d: "4x and 16x filtering. For strong dedicated GPUs.",
+  p_bal: "Balanced", p_bal_d: "3x and 16x. Almost the same look, much lighter.",
+  p_light: "Light / cool laptop", p_light_d: "2x and 8x. Less heat and fan noise; helps on heavy tracks.",
+  p_orig: "Original look", p_orig_d: "1x, no extra filtering: GP3 as it was in 1999.",
+  internal_scale: ["3D internal resolution", "Renders the 3D larger and scales it down (no jaggies). Auto = 4x on a dedicated GPU, 2x on integrated. Higher = nicer and heavier."],
+  anisotropy: ["Anisotropic filtering", "Keeps textures seen at an angle sharp (distant tarmac). Auto = 16x dedicated, 8x integrated."],
+  force_filtering: ["Smooth textures", "Filters textures even when the game asks for hard pixels."],
+  vsync: ["Vertical sync (V-Sync)", "Syncs to the monitor: no tearing. Recommended."],
+  aspect: ["4:3 aspect", "4:3 resolutions on a wide screen: keep with black bars or stretch."],
+  wide_mode: ["Widescreen resolution", "Replaces the 1280x1024 option in the game's graphics menu. Pick 1280x1024 in the game to use it."],
+  w_desk: "Desktop", w_off: "Off", w_custom: "Custom",
+  hor_plus: ["Hor+ field of view", "On wide screens shows more at the sides, no stretching or cropping."],
+  fov_percent: ["Field of view tweak", "100% = default. More = wider; less = more zoom. Applies to all cameras."],
+  mode: ["Screen mode", "Fullscreen doesn't change the monitor resolution. Alt+Enter switches in game."],
+  m_full: "Fullscreen", m_win: "Window",
+  window_size: ["Window size", "In window mode: stays the same from menu to race; the picture fits inside. Auto = 80% of the screen."],
+  gpu: ["Graphics card", "On laptops with two GPUs. Auto uses the dedicated one (NVIDIA/AMD)."],
+  g_ded: "Dedicated", g_int: "Integrated", g_sys: "Don't touch",
+  renderer: ["Renderer", "OpenGL uses the graphics card (recommended). Software uses the CPU: slow, emergencies only."],
+  spray_opacity: ["Water spray and smoke", "100% = GP3 original. Lower values avoid the “grey wall” near the TV cameras."],
+  spray_near_fade: ["Fade spray hugging the camera", "Hides spray clouds that pass right against the camera."],
+  virtual_cd: ["Virtual CD", "No CD, ISO or image mounting needed."],
+  directplay: ["DirectPlay (network multiplayer)", "Off avoids a delay or error when the game starts."],
+  overlay_locks: ["Cars and shadows layer on the GPU", "Big performance gain. Turn off only for testing."],
+  lazy_readback: ["Lazy picture read-back", "Reads the picture back only when needed."],
+  exception_free: ["Exception-free mode", "Auto turns it on when a debugger is attached (GPxPatch)."],
+  fast_exit: ["Fast exit", "Stops Gp3.exe from staying stuck in the background on exit."],
+  close_leftover_instances: ["Close leftover Gp3.exe", "On start, closes an earlier run that got stuck."],
+  keep_cpu_affinity: ["Keep GPxPatch's CPU option", "Off (recommended): gives all cores back to the game. With GPxPatch CPU=0, mouse and keyboard freeze."],
+  avoid_exclusive_fullscreen: ["Avoid exclusive fullscreen (NVIDIA)", "Keeps Alt+Tab and Alt+Enter working well."],
+  log_level: ["gp3rt.log detail", "0 = errors only, 1 = normal, 2 = detailed."],
+  frame_dump: ["Ctrl+F11 diagnostics", "Saves everything drawn in a frame, for reporting graphics glitches."],
+}};
+let LANG = (navigator.language || "pt").toLowerCase().startsWith("pt") ? "pt" : "en";
+try { const l = localStorage.getItem("gp3rt-lang"); if (l === "pt" || l === "en") LANG = l; } catch (e) {}
+const t = k => T[LANG][k];
+
+/* ---------- ini model (keeps comments and unknown keys) ---------- */
+let lines = [], handle = null, fileName = "", dirty = false;
+function load(text) { lines = text.replace(/\r\n/g, "\n").split("\n"); }
+function findKey(sec, key) {
+  let cur = "";
+  for (let i = 0; i < lines.length; i++) {
+    const s = lines[i].trim();
+    const m = s.match(/^\[(.+)\]$/); if (m) { cur = m[1].trim().toLowerCase(); continue; }
+    if (cur !== sec || s.startsWith(";") || s.startsWith("#")) continue;
+    const e = s.indexOf("="); if (e < 0) continue;
+    if (s.slice(0, e).trim().toLowerCase() === key) return i;
+  }
+  return -1;
+}
+function get(sec, key, def) {
+  const i = findKey(sec, key); if (i < 0) return def;
+  let v = lines[i].slice(lines[i].indexOf("=") + 1);
+  const c = v.search(/\s;/); if (c >= 0) v = v.slice(0, c);
+  return v.trim();
+}
+function set(sec, key, val) {
+  val = String(val);
+  const i = findKey(sec, key);
+  if (i >= 0) { const k = lines[i].slice(0, lines[i].indexOf("=")); if (get(sec, key) === val) return; lines[i] = k.trimEnd() + "=" + val; }
+  else {
+    let s = -1, end = lines.length;
+    for (let j = 0; j < lines.length; j++) {
+      const m = lines[j].trim().match(/^\[(.+)\]$/);
+      if (m) { if (s >= 0) { end = j; break; } if (m[1].trim().toLowerCase() === sec) s = j; }
+    }
+    if (s < 0) { if (lines.length && lines[lines.length - 1].trim() !== "") lines.push(""); lines.push("[" + sec + "]", key + "=" + val); }
+    else { let at = end; while (at > s + 1 && lines[at - 1].trim() === "") at--; lines.splice(at, 0, key + "=" + val); }
+  }
+  markDirty();
+}
+const text = () => lines.join("\r\n");
+
+/* ---------- controls ---------- */
+const DEF = {};   // defaults from the embedded file
+const ctl = [];   // {render()}
+function row(card, key, labelKey, control) {
+  const r = document.createElement("div"); r.className = "row";
+  const l = document.createElement("div");
+  l.innerHTML = `<div class="lbl"></div><div class="help"></div><div class="key">${key}</div>`;
+  const lt = () => { const v = t(labelKey); l.querySelector(".lbl").textContent = v[0]; l.querySelector(".help").textContent = v[1]; };
+  lt(); r.append(l, control.el); document.getElementById(card).append(r);
+  ctl.push({ render: () => { lt(); control.render(); } });
+}
+function seg(sec, key, opts, def) {
+  const el = document.createElement("div"); el.className = "seg";
+  const render = () => {
+    el.innerHTML = ""; const cur = String(get(sec, key, def)).toLowerCase();
+    for (const [v, lab] of opts) {
+      const b = document.createElement("button"); b.type = "button";
+      b.textContent = typeof lab === "function" ? lab() : lab;
+      if (cur === String(v).toLowerCase()) b.className = "on";
+      b.onclick = () => { set(sec, key, v); renderAll(); };
+      el.append(b);
+    }
+  };
+  return { el, render };
+}
+function tog(sec, key, def, inverted) {
+  const el = document.createElement("button"); el.type = "button"; el.className = "tog";
+  const render = () => { const on = get(sec, key, def) !== "0"; el.classList.toggle("on", inverted ? !on : on); el.setAttribute("aria-pressed", el.classList.contains("on")); el.title = el.classList.contains("on") ? t("on") : t("off"); };
+  el.onclick = () => { const on = get(sec, key, def) !== "0"; set(sec, key, on ? 0 : 1); renderAll(); };
+  return { el, render };
+}
+function slider(sec, key, def, min, max, step, unit) {
+  const el = document.createElement("div"); el.className = "slider";
+  el.innerHTML = `<input type="range" min="${min}" max="${max}" step="${step}"><output></output>`;
+  const r = el.querySelector("input"), o = el.querySelector("output");
+  const render = () => { const v = parseInt(get(sec, key, def), 10); r.value = isNaN(v) ? def : v; o.textContent = r.value + unit; };
+  r.oninput = () => { o.textContent = r.value + unit; set(sec, key, r.value); updatePreview(); };
+  return { el, render };
+}
+function wideCtl() {
+  const el = document.createElement("div"); el.className = "wide";
+  const s = document.createElement("div"); s.className = "seg";
+  const w = document.createElement("input"), h = document.createElement("input");
+  for (const i of [w, h]) { i.type = "number"; i.className = "num"; i.min = 320; i.max = 7680; }
+  const x = document.createElement("span"); x.textContent = "×";
+  const custom = document.createElement("span"); custom.className = "wide"; custom.append(w, x, h);
+  el.append(s, custom);
+  const mode = () => { const W = parseInt(get("video", "wide_width", "-1"), 10); return W < 0 ? "desk" : W === 0 ? "off" : "custom"; };
+  const render = () => {
+    s.innerHTML = ""; const m = mode();
+    for (const [v, k] of [["desk", "w_desk"], ["off", "w_off"], ["custom", "w_custom"]]) {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = t(k); if (m === v) b.className = "on";
+      b.onclick = () => {
+        if (v === "desk") { set("video", "wide_width", -1); set("video", "wide_height", -1); }
+        else if (v === "off") { set("video", "wide_width", 0); set("video", "wide_height", 0); }
+        else { const sw = Math.min(screen.width * (window.devicePixelRatio || 1), 7680) | 0, sh = Math.min(screen.height * (window.devicePixelRatio || 1), 4320) | 0;
+               set("video", "wide_width", sw || 1920); set("video", "wide_height", sh || 1080); }
+        renderAll();
+      };
+      s.append(b);
+    }
+    custom.style.display = m === "custom" ? "" : "none";
+    w.value = get("video", "wide_width", "1920"); h.value = get("video", "wide_height", "1080");
+  };
+  w.onchange = () => { const v = parseInt(w.value, 10); if (v >= 320) set("video", "wide_width", v); updatePreview(); };
+  h.onchange = () => { const v = parseInt(h.value, 10); if (v >= 200) set("video", "wide_height", v); updatePreview(); };
+  return { el, render };
+}
+
+function build() {
+  const A = () => t("auto");
+  row("c_video", "internal_scale", "internal_scale", seg("video", "internal_scale", [["auto", A], ["1", "1x"], ["2", "2x"], ["3", "3x"], ["4", "4x"]], "auto"));
+  row("c_video", "anisotropy", "anisotropy", seg("video", "anisotropy", [["auto", A], ["0", () => t("off")], ["2", "2x"], ["4", "4x"], ["8", "8x"], ["16", "16x"]], "auto"));
+  row("c_video", "force_filtering", "force_filtering", tog("video", "force_filtering", "1"));
+  row("c_video", "vsync", "vsync", tog("video", "vsync", "1"));
+
+  row("c_wide", "wide_width / wide_height", "wide_mode", wideCtl());
+  row("c_wide", "hor_plus", "hor_plus", tog("video", "hor_plus", "1"));
+  row("c_wide", "fov_percent", "fov_percent", slider("video", "fov_percent", 100, 70, 140, 1, "%"));
+
+  row("c_screen", "mode", "mode", seg("video", "mode", [["fullscreen", () => t("m_full")], ["window", () => t("m_win")]], "fullscreen"));
+  row("c_screen", "window_size", "window_size", seg("video", "window_size", [["auto", A], ["1280x720", "1280x720"], ["1600x900", "1600x900"], ["1920x1080", "1920x1080"]], "auto"));
+  row("c_screen", "aspect", "aspect", seg("video", "aspect", [["keep", () => LANG === "pt" ? "Manter" : "Keep"], ["stretch", () => LANG === "pt" ? "Esticar" : "Stretch"]], "keep"));
+  row("c_screen", "gpu", "gpu", seg("video", "gpu", [["auto", A], ["dedicated", () => t("g_ded")], ["integrated", () => t("g_int")], ["system", () => t("g_sys")]], "auto"));
+  row("c_screen", "renderer", "renderer", seg("video", "renderer", [["opengl", "OpenGL"], ["software", "Software"]], "opengl"));
+
+  row("c_rain", "spray_opacity", "spray_opacity", slider("video", "spray_opacity", 60, 0, 100, 5, "%"));
+  row("c_rain", "spray_near_fade", "spray_near_fade", tog("video", "spray_near_fade", "1"));
+
+  row("c_game", "virtual_cd", "virtual_cd", tog("game", "virtual_cd", "1"));
+  row("c_game", "directplay", "directplay", tog("game", "directplay", "0"));
+
+  row("c_adv", "keep_cpu_affinity", "keep_cpu_affinity", tog("advanced", "keep_cpu_affinity", "0"));
+  row("c_adv", "overlay_locks", "overlay_locks", tog("advanced", "overlay_locks", "1"));
+  row("c_adv", "lazy_readback", "lazy_readback", tog("advanced", "lazy_readback", "1"));
+  row("c_adv", "exception_free", "exception_free", seg("advanced", "exception_free", [["-1", A], ["1", () => t("on")], ["0", () => t("off")]], "-1"));
+  row("c_adv", "fast_exit", "fast_exit", tog("advanced", "fast_exit", "1"));
+  row("c_adv", "close_leftover_instances", "close_leftover_instances", tog("advanced", "close_leftover_instances", "1"));
+  row("c_adv", "avoid_exclusive_fullscreen", "avoid_exclusive_fullscreen", tog("advanced", "avoid_exclusive_fullscreen", "1"));
+  row("c_adv", "log_level", "log_level", seg("debug", "log_level", [["0", "0"], ["1", "1"], ["2", "2"]], "1"));
+  row("c_adv", "frame_dump", "frame_dump", tog("debug", "frame_dump", "1"));
+}
+
+const PRESETS = [
+  ["p_max", "#e10600", { internal_scale: 4, anisotropy: 16, force_filtering: 1 }],
+  ["p_bal", "#f5a524", { internal_scale: 3, anisotropy: 16, force_filtering: 1 }],
+  ["p_light", "#2fbf71", { internal_scale: 2, anisotropy: 8, force_filtering: 1 }],
+  ["p_orig", "#8a94a3", { internal_scale: 1, anisotropy: 0, force_filtering: 0 }],
+];
+function renderPresets() {
+  const box = document.getElementById("presets"); box.innerHTML = "";
+  for (const [k, c, vals] of PRESETS) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "preset";
+    b.innerHTML = `<div class="pt"><span class="dot" style="background:${c}"></span></div><div class="pd"></div>`;
+    b.querySelector(".pt").append(t(k)); b.querySelector(".pd").textContent = t(k + "_d");
+    b.onclick = () => { for (const [key, v] of Object.entries(vals)) set("video", key, v); renderAll(); status(t("st_preset")(t(k)), "warn"); };
+    box.append(b);
+  }
+}
+
+/* ---------- ui state ---------- */
+function status(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = "status " + (cls || ""); }
+function markDirty() { dirty = true; status(t("st_dirty"), "warn"); }
+function updatePreview() { document.getElementById("preview").textContent = text(); }
+function renderTexts() {
+  document.documentElement.lang = LANG === "pt" ? "pt-BR" : "en";
+  for (const e of document.querySelectorAll("[data-t]")) e.textContent = t(e.dataset.t);
+  document.getElementById("lpt").classList.toggle("on", LANG === "pt");
+  document.getElementById("len").classList.toggle("on", LANG === "en");
+  document.getElementById("fileinfo").innerHTML = fileName ? t("opened")(fileName.replace(/[<>&]/g, "")) : t("nofile");
+}
+function renderAll() { renderTexts(); renderPresets(); for (const c of ctl) c.render(); updatePreview(); }
+function setLang(l) { LANG = l; try { localStorage.setItem("gp3rt-lang", l); } catch (e) {} renderAll(); status(dirty ? t("st_dirty") : t("st_clean"), dirty ? "warn" : ""); }
+
+/* ---------- open / save ---------- */
+const canFS = "showOpenFilePicker" in window;
+async function openFile() {
+  if (canFS) {
+    try {
+      const [h] = await window.showOpenFilePicker({ types: [{ description: "gp3rt.ini", accept: { "text/plain": [".ini"] } }] });
+      const f = await h.getFile(); handle = h; fileName = f.name; load(await f.text()); dirty = false; renderAll(); status(t("st_clean"));
+    } catch (e) { if (e && e.name !== "AbortError") document.getElementById("picker").click(); }
+  } else document.getElementById("picker").click();
+}
+document.getElementById("picker").onchange = async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  handle = null; fileName = f.name; load(await f.text()); dirty = false; renderAll(); status(t("st_clean")); ev.target.value = "";
+};
+function download() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text()], { type: "text/plain" }));
+  a.download = "gp3rt.ini"; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+async function save() {
+  if (handle && handle.createWritable) {
+    try {
+      const w = await handle.createWritable(); await w.write(text()); await w.close();
+      dirty = false; status(t("st_saved")(fileName), "ok"); return;
+    } catch (e) { download(); dirty = false; status(t("st_err"), "warn"); return; }
+  }
+  download(); dirty = false; status(t("st_down"), "ok");
+}
+document.getElementById("open").onclick = openFile;
+document.getElementById("save").onclick = save;
+document.getElementById("defaults").onclick = () => {
+  const keep = lines; load(DEFAULT_INI);
+  if (!keep.length) return;
+  dirty = true; renderAll(); status(t("st_def"), "warn");
+};
+document.getElementById("lpt").onclick = () => setLang("pt");
+document.getElementById("len").onclick = () => setLang("en");
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+load(DEFAULT_INI);
+build();
+renderAll();
+status(t("st_clean"));
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+LIBRARY opengl32.dll
+EXPORTS
+wglCreateContext@4
+wglMakeCurrent@8
+wglDeleteContext@4
+wglGetProcAddress@4
+wglGetCurrentContext@0
