@@ -1,3 +1,5 @@
+
+
 # GP3RT — Grand Prix 3 Runtime
 
 **Grand Prix 3 e Grand Prix 3 2000 em computadores atuais.**
@@ -64,3 +66,70 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md), [limitações](docs/LIMITACOES.md) e [h
 - GPxPatch, seus autores e a comunidade de Grand Prix 3.
 
 Este é um projeto de fãs sem vínculo oficial com os titulares do jogo. Não inclui o jogo, pistas, texturas ou executáveis comerciais. Nenhuma licença de software foi acrescentada nesta preparação; veja [STATUS-LICENCA.md](STATUS-LICENCA.md).
+
+# GP3RT — Grand Prix 3 Runtime
+
+**Grand Prix 3 and Grand Prix 3 2000 on modern computers.**
+
+[English guide](docs/USER-GUIDE.en.md) · [Installation](docs/INSTALACAO.md) · [Configuration](docs/CONFIGURACAO.md) · [Technical documentation](docs/ARQUITETURA.md) · [Building from source](docs/COMPILACAO.md)
+
+GP3RT is an independent project by Rodrigo Motta (Rods), developed with assistance from Claude (Anthropic), to keep Grand Prix 3 and Grand Prix 3 2000 playable on modern computers.
+
+On Windows, a game-specific `ddraw.dll` implements the legacy graphics functionality used by GP3, rendering through OpenGL. Copy the DLL and configuration file into the game folder; the original game files are still required.
+
+## Download
+
+Open **Releases** on the right side of this page and download **GP3RT-1.0.1-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
+
+## Project status
+
+| Component | Current status |
+| --- | --- |
+| Windows | DLL version 1.0.1 supplied in the community package |
+| Game builds recognized by the code | GP3 1.13 and GP3 2000; specific features may be disabled on other builds |
+| Target operating systems | Windows 10 and 11; the community testing matrix is still being developed |
+| Scope | Windows only; the Linux project will be published separately when ready |
+| Documentation verification | Static inspection of the supplied files; this documentation review did not include running the game or rebuilding the DLL |
+
+## Features
+
+- OpenGL renderer with an optional software rendering backend.
+- Increased internal rendering resolution, with configurable bilinear and anisotropic filtering.
+- Widescreen with Hor+ field of view on recognized game builds.
+- Borderless fullscreen and windowed modes; switch between them with Alt+Enter.
+- Adjustable rain spray and a dedicated GPU preference.
+- GPxPatch integration, PNG screenshots, logging, and frame diagnostics.
+- Version 1.0.1 fix for GP3 1.13 string-table handling, including the issue observed with GPxPatch Debug mode.
+
+These features were identified in the code and package documentation. Performance and compatibility depend on hardware, executable build, track, and mods; specific PO or FPS values are not guaranteed.
+
+## Getting started
+
+1. Back up your game folder and any wrappers you currently use.
+2. Move previously installed graphics wrappers out of the game folder, especially the existing `ddraw.dll`. Do not remove original game DLLs without identifying their purpose.
+3. Extract `ddraw.dll` and `gp3rt.ini` alongside the game executable. Never copy the DLL into System32.
+4. Disable compatibility modes for the game executable and GPxPatch.
+5. In GPxPatch, select **CPU = All / all cores** (the label may vary). Start with **Debug disabled**; tracks requiring Debug can use the version 1.0.1 fix as described in the [installation guide](docs/INSTALACAO.md).
+6. Launch the game and select hardware-accelerated graphics. For widescreen, select **1280×1024**: GP3RT uses the resolution specified in the INI, which defaults to your desktop resolution.
+
+The optional `GP3RT-Configurador.html` configuration tool is included in the download. If your browser downloads a new INI file, copy it into the game folder, replacing the previous one.
+
+## What remains unchanged
+
+The DLL does not rewrite the game executable on disk. However, it applies hooks and patches **in the running process’s memory**, including resolution and field-of-view adjustments. The project aims to preserve the original experience; it is not a complete rewrite of the game.
+
+## Issues and contributions
+
+Open an **Issue** with your game and GP3RT versions, Windows version, CPU/GPU, graphics driver, GPxPatch version, track, mods, reproduction steps, and `gp3rt.log`. Copy the log before launching the game again. For graphical defects, press Ctrl+F11 and compress the `screens/frame_NNNNN` folder. Review logs and captures before publishing them, as they may contain personal file paths and mod content.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [limitations](docs/LIMITACOES.md), and the [changelog](CHANGELOG.md).
+
+## Credits
+
+- Project, direction, testing, and community validation: **Rodrigo Motta (Rods)**.
+- Development assistance from **Claude / Anthropic**, as credited in the original package.
+- Original game: **Geoff Crammond / MicroProse**.
+- Reference for the widescreen FOV approach: **WidePrix3**, by **hatcher the patcher**, as acknowledged in the code comments.
+- GPxPatch, its authors, and the Grand Prix 3 community.
+
+This is an unofficial fan project with no affiliation with the game’s rights holders. It does not include the game, tracks, textures, or commercial executables. No software license was added during this preparation; see [STATUS-LICENCA.md](STATUS-LICENCA.md).
