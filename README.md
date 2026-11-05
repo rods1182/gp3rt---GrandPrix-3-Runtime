@@ -12,13 +12,13 @@ No Windows, uma `ddraw.dll` específica para esses jogos implementa o caminho gr
 
 ## Download
 
-Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.0.1-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
+Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.0.3-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
 
 ## Estado do projeto
 
 | Componente | Estado deste material |
 | --- | --- |
-| Windows | DLL 1.0.1 fornecida no pacote da comunidade |
+| Windows | DLL 1.0.3 fornecida no pacote da comunidade |
 | Jogos reconhecidos pelo código | GP3 1.13 e GP3 2000; outras builds podem ter recursos específicos desativados |
 | Sistemas alvo | Windows 10 e 11; matriz de testes comunitários ainda em construção |
 | Escopo | Somente Windows; o projeto Linux será publicado separadamente quando estiver pronto |
@@ -33,6 +33,8 @@ Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.0.1-Win
 - Ajustes de spray da chuva e preferência por GPU dedicada.
 - Integração com GPxPatch, capturas PNG, log e diagnóstico de quadros.
 - Correção 1.0.1 para leitura de textos do GP3 1.13, incluindo o problema observado com o modo Debug do GPxPatch.
+- Correção 1.0.2 para o GP3 / GP3 2000 que fechava sozinho ao entrar na pista.
+- Correção 1.0.3 para pistas muito detalhadas (ex.: pistas de 1998 do Belini): carros só com as rodas, polígonos cinza e fechamento com a câmera de TV afastada. O limite de geometria por quadro do GP3 passou de 2.999 para 16.000 (`edge_fix=1`).
 
 Os recursos foram identificados no código e nos materiais do pacote. Desempenho e compatibilidade dependem de hardware, executável, pista e mods; não há promessa de PO ou FPS específicos.
 
@@ -79,13 +81,13 @@ On Windows, a game-specific `ddraw.dll` implements the legacy graphics functiona
 
 ## Download
 
-Open **Releases** on the right side of this page and download **GP3RT-1.0.1-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
+Open **Releases** on the right side of this page and download **GP3RT-1.0.3-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
 
 ## Project status
 
 | Component | Current status |
 | --- | --- |
-| Windows | DLL version 1.0.1 supplied in the community package |
+| Windows | DLL version 1.0.3 supplied in the community package |
 | Game builds recognized by the code | GP3 1.13 and GP3 2000; specific features may be disabled on other builds |
 | Target operating systems | Windows 10 and 11; the community testing matrix is still being developed |
 | Scope | Windows only; the Linux project will be published separately when ready |
@@ -100,6 +102,8 @@ Open **Releases** on the right side of this page and download **GP3RT-1.0.1-Wind
 - Adjustable rain spray and a dedicated GPU preference.
 - GPxPatch integration, PNG screenshots, logging, and frame diagnostics.
 - Version 1.0.1 fix for GP3 1.13 string-table handling, including the issue observed with GPxPatch Debug mode.
+- Version 1.0.2 fix for GP3 / GP3 2000 closing by itself when entering the track.
+- Version 1.0.3 fix for very detailed tracks (e.g. Belini's 1998 tracks): cars reduced to wheels, grey polygons and crashes with the TV camera pulled back. GP3's per-frame geometry limit was raised from 2,999 to 16,000 (`edge_fix=1`).
 
 These features were identified in the code and package documentation. Performance and compatibility depend on hardware, executable build, track, and mods; specific PO or FPS values are not guaranteed.
 

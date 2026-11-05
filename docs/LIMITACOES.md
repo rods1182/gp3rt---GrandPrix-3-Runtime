@@ -17,6 +17,7 @@
 | Teclado/mouse sem resposta | CPU em todos os núcleos; conferir `keep_cpu_affinity=0` |
 | PO alto | Reduzir `internal_scale`; comparar na mesma pista/câmera/clima; testar menos objetos de pista |
 | Widescreen ausente | Selecionar 1280×1024; conferir INI e `game build` no log |
+| Carros só com as rodas, polígonos cinza ou fechamento com câmera de TV afastada em pistas muito detalhadas | Usar DLL 1.0.3 com `edge_fix=1`; se o gp3rt.log mostrar "still too many edges", enviar o log |
 | Fechamento com GPxPatch Debug | Usar DLL 1.0.1, `str_guard=1` e conferir reconhecimento de GP3 1.13; comparar sem Debug |
 | Configurador parece não salvar | Copiar o INI baixado para a pasta correta e reiniciar o jogo |
 

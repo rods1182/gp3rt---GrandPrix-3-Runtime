@@ -62,6 +62,7 @@ typedef struct module {
 module_t *pe_load(const char *host_path, const char *name, int is_exe);
 module_t *pe_find_module(const char *name);
 module_t *pe_module_by_base(uint32_t base);
+module_t *pe_module_by_addr(uint32_t a);
 uint32_t pe_get_proc(module_t *m, const char *name, int ordinal);
 extern module_t *g_exe;
 

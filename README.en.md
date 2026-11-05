@@ -8,15 +8,15 @@ An independent project by Rodrigo Motta (Rods), developed with Claude (Anthropic
 
 ## Download and status
 
-Open **Releases** and download **GP3RT-1.0.1-Windows.zip**. GitHub's automatic **Source code** archives do not contain the ready-to-use DLL.
+Open **Releases** and download **GP3RT-1.0.3-Windows.zip**. GitHub's automatic **Source code** archives do not contain the ready-to-use DLL.
 
-The supplied Windows DLL identifies as version 1.0.1 and targets GP3 1.13 and GP3 2000 on Windows 10/11. This repository is Windows-only. The unfinished Linux project will be published separately when ready. Documentation was prepared through static inspection; no game execution or rebuild was performed.
+The supplied Windows DLL identifies as version 1.0.3 and targets GP3 1.13 and GP3 2000 on Windows 10/11. This repository is Windows-only. The unfinished Linux project will be published separately when ready. Documentation was prepared through static inspection; no game execution or rebuild was performed.
 
 ## Features
 
 OpenGL rendering; configurable internal scaling and texture filtering; Hor+ widescreen on recognized game builds; borderless fullscreen and windowed mode; rain spray settings; GPU preferences; GPxPatch integration; PNG screenshots and diagnostic frame dumps.
 
-Version 1.0.1 includes a GP3 1.13 string-table guard addressing a crash observed with GPxPatch Debug mode. It does not establish universal compatibility with every track or mod.
+Version 1.0.1 includes a GP3 1.13 string-table guard addressing a crash observed with GPxPatch Debug mode. Version 1.0.2 fixes GP3 / GP3 2000 closing when entering the track. Version 1.0.3 raises GP3's per-frame geometry limit (2,999 -> 16,000 edges) and fixes the crash, missing car bodies and grey polygons on very detailed tracks with the TV camera pulled back (`edge_fix=1`). It does not establish universal compatibility with every track or mod.
 
 ## Quick start
 

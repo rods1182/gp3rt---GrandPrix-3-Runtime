@@ -546,7 +546,9 @@ uintptr_t plat_module_of(void *addr, char *name, int n) {
     gp3_snprintf(name, n, "%08x(no module)", (unsigned)((uintptr_t)addr & ~0xffffu));
     return (uintptr_t)addr & ~0xffffu;
 }
-static void describe_addr(uintptr_t a, char *o, int n) {
+void win_describe_addr(uintptr_t a, char *o, int n);
+static void describe_addr(uintptr_t a, char *o, int n) { win_describe_addr(a, o, n); }
+void win_describe_addr(uintptr_t a, char *o, int n) {
     MBI_W m; char path[260] = "?";
     if (VirtualQuery((void *)a, &m, sizeof m) && m.alloc_base &&
         GetModuleFileNameA((HMODULE)(uintptr_t)m.alloc_base, path, sizeof path)) {
@@ -596,8 +598,13 @@ static LONG WINAPI veh(EXCEPTION_POINTERS_W *ep) {
     if (r->code == 0xC0000005 && r->nparams >= 2) {
         if (d3d_guard_fault((void *)r->info[1], r->info[0] == 1)) return -1;   /* EXCEPTION_CONTINUE_EXECUTION */
     }
-    static int logged;
+    static int logged, so_logged, other_logged;
+    if (r->code == 0xC00000FD) {   /* stack overflow: almost no stack left, write a short line only */
+        if (!so_logged++) { extern void rt_log_raw(const char *); rt_log_raw("STACK OVERFLOW (code c00000fd): the game will close"); }
+        return 0;
+    }
     if ((r->code & 0xF0000000) == 0xC0000000 && logged < 8) { logged++; log_exception("exception", ep); }
+    else if (r->code != 0x406D1388 && r->code != 0x40010006 && r->code != 0x4001000A && r->code != 0x80000003 && r->code != 0x6d9 && r->code != 0xE06D7363 && other_logged < 8) { other_logged++; log_exception("exception (other)", ep); }
     return 0;   /* EXCEPTION_CONTINUE_SEARCH */
 }
 static LONG WINAPI unhandled(EXCEPTION_POINTERS_W *ep) {

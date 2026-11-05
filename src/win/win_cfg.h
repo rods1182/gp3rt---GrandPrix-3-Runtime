@@ -1,6 +1,6 @@
 #ifndef WIN_CFG_H
 #define WIN_CFG_H
-#define GP3RT_VERSION "1.0.1"
+#define GP3RT_VERSION "1.0.3"
 typedef struct {
     int windowed, window_scale, software, internal_scale, filtering, anisotropy, vsync, stretch;
     int virtual_cd, multiplayer, lazy_readback;

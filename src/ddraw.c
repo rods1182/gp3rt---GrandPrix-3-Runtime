@@ -137,17 +137,18 @@ void dds_present(ddsurf_t *s) {
 static ddsurf_t *volatile g_foreign_present;
 extern int rdr_foreign_thread(void);
 extern int rdr_held_elsewhere(void);
-void ddraw_flush_present(void);
-void ddraw_run_deferred(void) {
-    if (g_pending_present) ddraw_flush_present();
+/* The two jobs below used to call each other (run_deferred -> flush_present ->
+ * run_deferred ...): with a present waiting from each side at the same moment that
+ * recursed until the stack ran out and Windows closed the game without a message
+ * (GP3 2000 loading a track, more often on fast PCs). Now each job is done once. */
+static void run_foreign_present(void) {
     if (!g_foreign_present || rdr_held_elsewhere() || rdr_foreign_thread()) return;
     DDLOCK();
     ddsurf_t *s = g_foreign_present; g_foreign_present = NULL;
     if (s && g_ddraw && g_ddraw->primary == s) dds_present_now(s);
     DDUNLOCK();
 }
-void ddraw_flush_present(void) {
-    if (g_foreign_present) ddraw_run_deferred();
+static void flush_pending_present(void) {
     if (!g_pending_present) return;
     if (rdr_held_elsewhere()) return;     /* the thread holding the renderer will show it */
     DDLOCK();
@@ -155,6 +156,8 @@ void ddraw_flush_present(void) {
     if (s && g_ddraw && g_ddraw->primary == s && rt_now_us() - g_last_present_us >= 8000) { g_pending_present = NULL; dds_present_now(s); }
     DDUNLOCK();
 }
+void ddraw_run_deferred(void) { flush_pending_present(); run_foreign_present(); }
+void ddraw_flush_present(void) { run_foreign_present(); flush_pending_present(); }
 /* from message pumps (PeekMessage/GetMessage hooks): never wait for the DirectDraw lock.
  * With a real GPU the presenting thread holds it while SwapBuffers waits for vsync;
  * blocking here would starve the window's message loop (keyboard/mouse, "not responding"). */
@@ -170,6 +173,11 @@ static void dds_present_now(ddsurf_t *s) {
     if (rdr_foreign_thread()) {
         static int told;
         if (!told) { told = 1; LOG("present from a secondary thread: deferred to the render thread"); }
+#ifdef GP3_WIN
+        { static int n; if (n < 3) { n++; extern void win_describe_addr(uintptr_t, char *, int); char a[300];
+            win_describe_addr((uintptr_t)__builtin_return_address(0), a, sizeof a);
+            LOG("  (thread %u, called from %s)", os_thread_id(), a); } }
+#endif
         g_foreign_present = s; g_last_present_us = rt_now_us(); return;
     }
     { static unsigned seen[4]; unsigned t = os_thread_id(); int k;

@@ -33,6 +33,10 @@ void rt_log(int lvl, const char *fmt, ...) {
     fflush(g_log);
     if (g_logmx_ok) os_mutex_unlock(&g_logmx);
 }
+void rt_log_raw(const char *msg) {   /* no formatting, no big stack buffers (stack overflow) */
+    if (!g_log) return;
+    fputs(msg, g_log); fputs("\n", g_log); fflush(g_log);
+}
 void rt_fatal(const char *fmt, ...) {
     char b[2048];
     va_list ap; va_start(ap, fmt); gp3_vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
@@ -112,8 +116,11 @@ static void *iat_hook(HMODULE mod, const char *dll, const char *fn, void *repl) 
         if (_stricmp((const char *)(base + d->name), dll)) continue;
         uint32_t *names = (uint32_t *)(base + (d->orig_thunk ? d->orig_thunk : d->first_thunk));
         void **iat = (void **)(base + d->first_thunk);
+        uint32_t img = *(uint32_t *)(base + pe + 0x50);   /* SizeOfImage */
+        if (!d->orig_thunk && mod != GetModuleHandleA(0)) continue;   /* bound/rewritten import table (injected modules): leave alone */
         for (int i = 0; names[i]; i++) {
             if (names[i] & 0x80000000u) continue;
+            if (names[i] + 2 >= img) break;
             if (strcmp((const char *)(base + names[i] + 2), fn)) continue;
             DWORD old;
             void *orig = iat[i];
@@ -320,6 +327,71 @@ static void kill_stale_instances(void) {
 
 /* experimental: widen the game's 1280x1024 entries of its resolution table (0xc64a80, 36-byte entries) */
 #include "../gamepatch.h"
+/* diagnostics: who creates threads, who ends the process, which messages the game shows */
+DLLIMP HANDLE WINAPI CreateThread(void *, size_t, DWORD (WINAPI *)(void *), void *, DWORD, DWORD *);
+static HANDLE (WINAPI *o_CreateThread)(void *, size_t, DWORD (WINAPI *)(void *), void *, DWORD, DWORD *);
+static HANDLE WINAPI h_CreateThread(void *sa, size_t st, DWORD (WINAPI *fn)(void *), void *arg, DWORD fl, DWORD *id) {
+    DWORD tid = 0; HANDLE h = o_CreateThread(sa, st, fn, arg, fl, &tid); if (id) *id = tid;
+    extern void win_describe_addr(uintptr_t, char *, int); char w[300]; win_describe_addr((uintptr_t)fn, w, sizeof w);
+    char c[300]; win_describe_addr((uintptr_t)__builtin_return_address(0), c, sizeof c);
+    LOG("game thread created: id %u, starts at %s, flags %x, created by %s", (unsigned)tid, w, (unsigned)fl, c);
+    return h;
+}
+static BOOL (WINAPI *o_TerminateProcess)(HANDLE, UINT);
+static BOOL WINAPI h_TerminateProcess(HANDLE p, UINT code) {
+    extern void win_describe_addr(uintptr_t, char *, int); char c[300]; win_describe_addr((uintptr_t)__builtin_return_address(0), c, sizeof c);
+    LOG("TerminateProcess(code %u) called by %s", code, c);
+    return o_TerminateProcess(p, code);
+}
+static int (WINAPI *o_MessageBoxA)(HWND, const char *, const char *, UINT);
+static int WINAPI h_MessageBoxA(HWND w, const char *txt, const char *cap, UINT f) {
+    LOG("game message box: [%s] %s", cap ? cap : "", txt ? txt : "");
+    int r = o_MessageBoxA(w, txt, cap, f);
+    LOG("message box closed (%d)", r);
+    return r;
+}
+/* diagnostics: the same hooks in every module loaded so far (video drivers end the
+   process themselves when they hit a fatal error) */
+static HMODULE g_self_mod;
+typedef struct { DWORD size, mod_id, pid, glbl, proc_cnt; uint8_t *base; DWORD bsize; HMODULE h; char name[256]; char path[260]; } MODENTRY_;
+DLLIMP BOOL WINAPI Module32First(HANDLE, MODENTRY_ *);
+DLLIMP BOOL WINAPI Module32Next(HANDLE, MODENTRY_ *);
+static void (WINAPI *o_ExitProcess2)(UINT);
+static void WINAPI h_ExitProcess2(UINT code) {
+    extern void win_describe_addr(uintptr_t, char *, int); char c[300]; win_describe_addr((uintptr_t)__builtin_return_address(0), c, sizeof c);
+    LOG("ExitProcess(code %u) called by %s", code, c);
+    o_ExitProcess2(code);
+}
+static void (WINAPI *o_RaiseFailFast)(void *, void *, DWORD);
+static void WINAPI h_RaiseFailFast(void *rec, void *ctx, DWORD f) {
+    extern void win_describe_addr(uintptr_t, char *, int); char c[300]; win_describe_addr((uintptr_t)__builtin_return_address(0), c, sizeof c);
+    LOG("RaiseFailFastException called by %s (the process ends now)", c);
+    o_RaiseFailFast(rec, ctx, f);
+}
+void win_hook_all_modules(void) {
+    static HMODULE done[256]; static int nd;
+    HANDLE snap = CreateToolhelp32Snapshot(0x8 /*TH32CS_SNAPMODULE*/, 0);
+    if (snap == (HANDLE)INVALID_HANDLE_VALUE || !snap) return;
+    MODENTRY_ me; memset(&me, 0, sizeof me); me.size = sizeof me;
+    HMODULE self = g_self_mod;
+    static const char *k32[] = { "kernel32.dll", "api-ms-win-core-processthreads-l1-1-0.dll", "api-ms-win-core-processthreads-l1-1-1.dll", "api-ms-win-core-processthreads-l1-1-2.dll", "kernelbase.dll" };
+    for (BOOL ok = Module32First(snap, &me); ok; ok = Module32Next(snap, &me)) {
+        HMODULE h = me.h; if (!h || h == self) continue;
+        int seen = 0; for (int i = 0; i < nd; i++) if (done[i] == h) seen = 1;
+        if (seen || nd >= 256) continue;
+        done[nd++] = h;
+        if (!_stricmp(me.name, "kernel32.dll") || !_stricmp(me.name, "kernelbase.dll") || !_stricmp(me.name, "ntdll.dll")) continue;
+        int n = 0;
+        for (int k = 0; k < 5; k++) {
+            void *o;
+            if ((o = iat_hook(h, k32[k], "TerminateProcess", (void *)h_TerminateProcess))) { if (!o_TerminateProcess) o_TerminateProcess = o; n++; }
+            if ((o = iat_hook(h, k32[k], "ExitProcess", (void *)h_ExitProcess2))) { if (!o_ExitProcess2) o_ExitProcess2 = o; n++; }
+            if ((o = iat_hook(h, k32[k], "RaiseFailFastException", (void *)h_RaiseFailFast))) { if (!o_RaiseFailFast) o_RaiseFailFast = o; n++; }
+        }
+        (void)n;
+    }
+    CloseHandle(snap);
+}
 static void install_hooks(void) {
     HMODULE exe = GetModuleHandleA(0);
     if (g_wcfg.virtual_cd) {
@@ -345,8 +417,13 @@ static void install_hooks(void) {
       if (GetPrivateProfileIntA("video", "hor_plus", 1, g_ini_path)) gp3_hor_plus((int)GetPrivateProfileIntA("video", "fov_percent", 100, g_ini_path));
       }
     if (GetPrivateProfileIntA("game", "str_guard", 1, g_ini_path)) gp3_fix_string_table();
+    if (GetPrivateProfileIntA("game", "edge_fix", 1, g_ini_path)) gp3_raise_edge_limit();
     o_ExitProcess = iat_hook(exe, "kernel32.dll", "ExitProcess", (void *)h_ExitProcess);
     if (!o_ExitProcess) LOG("note: ExitProcess hook not installed");
+    o_CreateThread = iat_hook(exe, "kernel32.dll", "CreateThread", (void *)h_CreateThread);
+    o_TerminateProcess = iat_hook(exe, "kernel32.dll", "TerminateProcess", (void *)h_TerminateProcess);
+    o_MessageBoxA = iat_hook(exe, "user32.dll", "MessageBoxA", (void *)h_MessageBoxA);
+    { HMODULE bk = GetModuleHandleA("binkw32.dll"); if (bk) { void *o = iat_hook(bk, "kernel32.dll", "CreateThread", (void *)h_CreateThread); if (o && !o_CreateThread) o_CreateThread = o; } }
     o_PeekMessageA = iat_hook(exe, "user32.dll", "PeekMessageA", (void *)h_PeekMessageA);
     o_GetMessageA = iat_hook(exe, "user32.dll", "GetMessageA", (void *)h_GetMessageA);
     o_SendMessageA = iat_hook(exe, "user32.dll", "SendMessageA", (void *)h_SendMessageA);
@@ -367,6 +444,7 @@ BOOL WINAPI DllMain(HMODULE h, DWORD reason, void *res) {
     if (reason == 0) { LOG("process exiting normally (DLL detach)"); return 1; }
     if (reason != 1) return 1;
     DisableThreadLibraryCalls(h);
+    g_self_mod = h;
     char exe[1024];
     GetModuleFileNameA(0, exe, sizeof exe);
     char *sl = strrchr(exe, '\\'); if (sl) *sl = 0;

@@ -1,4 +1,4 @@
-# Referência do gp3rt.ini — 1.0.1
+# Referência do gp3rt.ini — 1.0.3
 
 Valores abaixo copiados do INI fornecido. São os valores **distribuídos**, não uma auditoria de todos os padrões internos quando uma chave é omitida. Feche o jogo antes de editar.
 
@@ -29,6 +29,7 @@ Valores abaixo copiados do INI fornecido. São os valores **distribuídos**, nã
 | `virtual_cd` | `1` | 1 apresenta ao jogo uma unidade virtual apontando para a pasta local. Não fornece arquivos do jogo nem resolve a proteção SafeDisc. |
 | `directplay` | `0` | 0 desativa o caminho DirectPlay na abertura; 1 permite tentativa de rede, sem garantir multiplayer. |
 | `str_guard` | `1` | 1 habilita proteção da tabela de strings no GP3 1.13 reconhecido. |
+| `edge_fix` | `1` | 1 amplia o limite de geometria por quadro do jogo (2.999 → 16.000 bordas, área de trabalho 100 KB → 2 MB) e impede o fechamento quando esse limite estoura. GP3 1.13 e GP3 2000. |
 
 ## [advanced]
 

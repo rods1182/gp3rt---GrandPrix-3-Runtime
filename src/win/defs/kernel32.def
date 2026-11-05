@@ -38,6 +38,8 @@ GetTickCount@0
 CreateToolhelp32Snapshot@8
 Process32First@8
 Process32Next@8
+Module32First@8
+Module32Next@8
 OpenProcess@12
 QueryFullProcessImageNameA@16
 TerminateProcess@8

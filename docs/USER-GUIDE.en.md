@@ -1,4 +1,4 @@
-# Windows user guide — GP3RT 1.0.1
+# Windows user guide — GP3RT 1.0.3
 
 ## Requirements and installation
 
@@ -11,6 +11,8 @@ Use hardware graphics; select 1280×1024 for widescreen. With wide_width=-1 and 
 ## GPxPatch Debug
 
 Version 1.0.1 adds str_guard=1 for a GP3 1.13 string-table overread observed with GPxPatch Debug. For tracks requiring Debug, enable it with the guard active and check the result. It is not a universal crash fix and is not applied to GP3 2000. This supersedes the original blanket instruction to always disable Debug.
+
+Version 1.0.3 adds edge_fix=1 (on by default): GP3's per-frame geometry limit goes from 2,999 to 16,000 edges, fixing missing car bodies, grey polygons and crashes on very detailed tracks with the TV camera pulled back. Applies to GP3 1.13 and GP3 2000.
 
 ## Configuration
 
