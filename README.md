@@ -6,6 +6,8 @@
 
 [English](README.en.md) · [Instalação](docs/INSTALACAO.md) · [Configuração](docs/CONFIGURACAO.md) · [Documentação técnica](docs/ARQUITETURA.md) · [Compilação](docs/COMPILACAO.md)
 
+https://github.com/rods1182/gp3rt---GrandPrix-3-Runtime/releases/latest
+
 GP3RT é um projeto independente de Rodrigo Motta (Rods), desenvolvido com assistência do Claude (Anthropic), para manter Grand Prix 3 e Grand Prix 3 2000 jogáveis em computadores atuais.
 
 No Windows, uma `ddraw.dll` específica para esses jogos implementa o caminho gráfico legado usado pelo GP3, com renderização OpenGL. Copie a DLL e o arquivo de configuração para a pasta do jogo; os arquivos do jogo continuam necessários.
