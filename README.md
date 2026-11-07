@@ -6,7 +6,7 @@
 
 [English](README.en.md) · [Instalação](docs/INSTALACAO.md) · [Configuração](docs/CONFIGURACAO.md) · [Documentação técnica](docs/ARQUITETURA.md) · [Compilação](docs/COMPILACAO.md)
 
-https://github.com/rods1182/gp3rt---GrandPrix-3-Runtime/releases/latest
+[Last Release](https://github.com/rods1182/gp3rt---GrandPrix-3-Runtime/releases/latest)
 
 GP3RT é um projeto independente de Rodrigo Motta (Rods), desenvolvido com assistência do Claude (Anthropic), para manter Grand Prix 3 e Grand Prix 3 2000 jogáveis em computadores atuais.
 
