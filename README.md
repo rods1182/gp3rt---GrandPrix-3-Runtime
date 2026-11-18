@@ -14,13 +14,13 @@ No Windows, uma `ddraw.dll` específica para esses jogos implementa o caminho gr
 
 ## Download
 
-Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.0.3-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
+Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.1.0-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
 
 ## Estado do projeto
 
 | Componente | Estado deste material |
 | --- | --- |
-| Windows | DLL 1.0.3 fornecida no pacote da comunidade |
+| Windows | DLL 1.1.0 fornecida no pacote da comunidade |
 | Jogos reconhecidos pelo código | GP3 1.13 e GP3 2000; outras builds podem ter recursos específicos desativados |
 | Sistemas alvo | Windows 10 e 11; matriz de testes comunitários ainda em construção |
 | Escopo | Somente Windows; o projeto Linux será publicado separadamente quando estiver pronto |
@@ -37,6 +37,7 @@ Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.0.3-Win
 - Correção 1.0.1 para leitura de textos do GP3 1.13, incluindo o problema observado com o modo Debug do GPxPatch.
 - Correção 1.0.2 para o GP3 / GP3 2000 que fechava sozinho ao entrar na pista.
 - Correção 1.0.3 para pistas muito detalhadas (ex.: pistas de 1998 do Belini): carros só com as rodas, polígonos cinza e fechamento com a câmera de TV afastada. O limite de geometria por quadro do GP3 passou de 2.999 para 16.000 (`edge_fix=1`).
+- 1.1.0: bem mais leve para o processador (o desenho do quadro vai para a placa de uma vez); texturas mais rápidas em PCs sem placa dedicada; correção do GP3 2000 fechando em corridas longas por um erro do próprio som 3D (`sound_lock_fix=1`); foco devolvido ao jogo quando outra janela o rouba escondida atrás dele; configurador que abre a pasta do jogo e lê o gp3rt.ini e o gp3rt.log.
 
 Os recursos foram identificados no código e nos materiais do pacote. Desempenho e compatibilidade dependem de hardware, executável, pista e mods; não há promessa de PO ou FPS específicos.
 
@@ -46,10 +47,10 @@ Os recursos foram identificados no código e nos materiais do pacote. Desempenho
 2. Retire da pasta os wrappers gráficos anteriores que você instalou, especialmente a `ddraw.dll` anterior. Não remova DLLs originais sem identificar sua função.
 3. Extraia `ddraw.dll` e `gp3rt.ini` ao lado do executável do jogo. Nunca copie a DLL para System32.
 4. Desative modos de compatibilidade do executável e do GPxPatch.
-5. No GPxPatch, use **CPU = All / todos os núcleos** (o rótulo pode variar). Comece com **Debug desativado**; pistas que exigem Debug podem usar a correção 1.0.1, conforme [instalação](docs/INSTALACAO.md).
+5. No GPxPatch, use **CPU = All / todos os núcleos** (o rótulo pode variar). Deixe o **Debug ligado**: com o GP3RT ele é necessário (desligado, o jogo pode fechar ao apertar "Pilotar"/"Drive").
 6. Abra o jogo e selecione o modo gráfico acelerado. Para widescreen, selecione **1280×1024**: o GP3RT usa a resolução definida no INI, por padrão a do desktop.
 
-O configurador `GP3RT-Configurador.html`, incluído no download, é opcional. Se o navegador baixar um novo INI, copie-o para a pasta do jogo substituindo o anterior.
+O configurador `GP3RT-Configurador.html`, incluído no download, é opcional: clique em "Abrir a pasta do jogo" e ele lê o `gp3rt.ini` e o `gp3rt.log` sozinho. No Chrome e no Edge salva direto na pasta; em outros navegadores baixa o INI para você copiar.
 
 ## O que é preservado
 
@@ -67,6 +68,8 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md), [limitações](docs/LIMITACOES.md) e [h
 - Desenvolvimento com assistência de **Claude / Anthropic**, conforme os créditos do pacote original.
 - Jogo original: **Geoff Crammond / MicroProse**.
 - Referência da abordagem de FOV widescreen: **WidePrix3**, de **hatcher the patcher**, conforme comentários do código.
+- **Stephan Séguin** ("Seguin" no GrandPrixGames.org): primeiro usuário e primeiro retorno; divulgou o projeto no GrandPrixGames.org, no GP2Forum e no grupo Grand Prix Games do Facebook.
+- **JF ("BeADriver")**: o log que revelou o erro do som 3D do GP3 2000 em corridas longas e o teste da correção.
 - GPxPatch, seus autores e a comunidade de Grand Prix 3.
 
 Este é um projeto de fãs sem vínculo oficial com os titulares do jogo. Não inclui o jogo, pistas, texturas ou executáveis comerciais. Nenhuma licença de software foi acrescentada nesta preparação; veja [STATUS-LICENCA.md](STATUS-LICENCA.md).
@@ -83,13 +86,13 @@ On Windows, a game-specific `ddraw.dll` implements the legacy graphics functiona
 
 ## Download
 
-Open **Releases** on the right side of this page and download **GP3RT-1.0.3-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
+Open **Releases** on the right side of this page and download **GP3RT-1.1.0-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
 
 ## Project status
 
 | Component | Current status |
 | --- | --- |
-| Windows | DLL version 1.0.3 supplied in the community package |
+| Windows | DLL version 1.1.0 supplied in the community package |
 | Game builds recognized by the code | GP3 1.13 and GP3 2000; specific features may be disabled on other builds |
 | Target operating systems | Windows 10 and 11; the community testing matrix is still being developed |
 | Scope | Windows only; the Linux project will be published separately when ready |
@@ -106,6 +109,7 @@ Open **Releases** on the right side of this page and download **GP3RT-1.0.3-Wind
 - Version 1.0.1 fix for GP3 1.13 string-table handling, including the issue observed with GPxPatch Debug mode.
 - Version 1.0.2 fix for GP3 / GP3 2000 closing by itself when entering the track.
 - Version 1.0.3 fix for very detailed tracks (e.g. Belini's 1998 tracks): cars reduced to wheels, grey polygons and crashes with the TV camera pulled back. GP3's per-frame geometry limit was raised from 2,999 to 16,000 (`edge_fix=1`).
+- 1.1.0: much lighter on the processor (each frame's drawing goes to the GPU in one go); faster textures on PCs without a dedicated GPU; fix for GP3 2000 closing in long races because of a bug in its own 3D sound (`sound_lock_fix=1`); focus returned to the game when a hidden window steals it; configurator that opens the game folder and reads gp3rt.ini and gp3rt.log.
 
 These features were identified in the code and package documentation. Performance and compatibility depend on hardware, executable build, track, and mods; specific PO or FPS values are not guaranteed.
 
@@ -115,7 +119,7 @@ These features were identified in the code and package documentation. Performanc
 2. Move previously installed graphics wrappers out of the game folder, especially the existing `ddraw.dll`. Do not remove original game DLLs without identifying their purpose.
 3. Extract `ddraw.dll` and `gp3rt.ini` alongside the game executable. Never copy the DLL into System32.
 4. Disable compatibility modes for the game executable and GPxPatch.
-5. In GPxPatch, select **CPU = All / all cores** (the label may vary). Start with **Debug disabled**; tracks requiring Debug can use the version 1.0.1 fix as described in the [installation guide](docs/INSTALACAO.md).
+5. In GPxPatch, select **CPU = All / all cores** (the label may vary). Keep **Debug enabled**: with GP3RT it is required (with it off, the game can close when you press "Drive").
 6. Launch the game and select hardware-accelerated graphics. For widescreen, select **1280×1024**: GP3RT uses the resolution specified in the INI, which defaults to your desktop resolution.
 
 The optional `GP3RT-Configurador.html` configuration tool is included in the download. If your browser downloads a new INI file, copy it into the game folder, replacing the previous one.
@@ -136,6 +140,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [limitations](docs/LIMITACOES.md), and t
 - Development assistance from **Claude / Anthropic**, as credited in the original package.
 - Original game: **Geoff Crammond / MicroProse**.
 - Reference for the widescreen FOV approach: **WidePrix3**, by **hatcher the patcher**, as acknowledged in the code comments.
+- **Stephan Séguin** ("Seguin" on GrandPrixGames.org): the first user and the first feedback; he spread the word on GrandPrixGames.org, GP2Forum and the Grand Prix Games group on Facebook.
+- **JF ("BeADriver")**: the log that revealed GP3 2000's 3D sound bug in long races, and testing the fix.
 - GPxPatch, its authors, and the Grand Prix 3 community.
 
 This is an unofficial fan project with no affiliation with the game’s rights holders. It does not include the game, tracks, textures, or commercial executables. No software license was added during this preparation; see [STATUS-LICENCA.md](STATUS-LICENCA.md).

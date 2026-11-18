@@ -18,7 +18,8 @@
 | PO alto | Reduzir `internal_scale`; comparar na mesma pista/câmera/clima; testar menos objetos de pista |
 | Widescreen ausente | Selecionar 1280×1024; conferir INI e `game build` no log |
 | Carros só com as rodas, polígonos cinza ou fechamento com câmera de TV afastada em pistas muito detalhadas | Usar DLL 1.0.3 com `edge_fix=1`; se o gp3rt.log mostrar "still too many edges", enviar o log |
-| Fechamento com GPxPatch Debug | Usar DLL 1.0.1, `str_guard=1` e conferir reconhecimento de GP3 1.13; comparar sem Debug |
+| Fechamento ao apertar "Pilotar" com o GPxPatch | Deixar o Debug do GPxPatch ligado; no GP3 1.13 manter `str_guard=1` |
+| GP3 2000 fecha depois de 20-40 minutos de corrida (gp3_2000.exe+0x13d49b) | DLL 1.1.0 com `sound_lock_fix=1` |
 | Configurador parece não salvar | Copiar o INI baixado para a pasta correta e reiniciar o jogo |
 
 Detecções de antivírus não foram investigadas nesta revisão. Não há base aqui para declarar todo alerta um falso positivo ou recomendar exclusões gerais; registre nome/versão da detecção e hash do arquivo para análise.

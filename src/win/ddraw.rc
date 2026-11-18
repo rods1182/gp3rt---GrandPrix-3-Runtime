@@ -1,6 +1,6 @@
 1 VERSIONINFO
-FILEVERSION 1,0,1,0
-PRODUCTVERSION 1,0,1,0
+FILEVERSION 1,1,0,0
+PRODUCTVERSION 1,1,0,0
 FILEOS 0x40004
 FILETYPE 0x2
 BEGIN
@@ -10,11 +10,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "GP3RT (projeto aberto)"
       VALUE "FileDescription", "GP3RT - renderizador DirectDraw/Direct3D 7 para Grand Prix 3 (OpenGL)"
-      VALUE "FileVersion", "1.0.1"
+      VALUE "FileVersion", "1.1.0"
       VALUE "InternalName", "ddraw"
       VALUE "OriginalFilename", "ddraw.dll"
       VALUE "ProductName", "GP3RT"
-      VALUE "ProductVersion", "1.0.1"
+      VALUE "ProductVersion", "1.1.0"
       VALUE "Comments", "Codigo-fonte incluido no pacote (codigo-fonte.tar.gz)"
     END
   END

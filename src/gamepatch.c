@@ -202,3 +202,53 @@ void gp3_raise_edge_limit(void) {
     *(uint32_t *)(uintptr_t)P = nB; *(uint32_t *)(uintptr_t)C = 0;
     LOG("3D edge limit: 2999 -> %u edges, work area %u KB -> %u KB (allocator at %p)", cap, (H - base) >> 10, EDGE_POOL >> 10, (void *)f);
 }
+
+/* GP3 2000 sound: a lock that is not a lock. The 3D sound manager keeps its buffers in a table
+   that two threads use at the same time: the game thread (starting and stopping sounds) and the
+   multimedia-timer thread (updating pitch and volume of every playing sound, gp3_2000.exe+0x13d3b0).
+   They guard it with a byte flag that each side tests and then sets in two separate steps, and the
+   game thread gives up after a few microseconds of waiting and carries on anyway. On one 2000-era
+   processor core the two threads almost never met; on today's multi-core processors they do now
+   and then: the game thread frees a sound while the timer thread is using it, and the game closes
+   with an access violation at gp3_2000.exe+0x13d49b - typically after 20-40 minutes of a long race.
+   Both sides now take the flag in one atomic step, and the game thread really waits for it. */
+static uint32_t g_snd_waits, g_snd_timeouts;
+#ifdef GP3_WIN
+static void snd_yield(int i) { Sleep(i < 200 ? 0 : 1); }
+#else
+#include <sched.h>
+#include <time.h>
+static void snd_yield(int i) { if (i < 200) sched_yield(); else { struct timespec ts = { 0, 1000000 }; nanosleep(&ts, NULL); } }
+#endif
+__attribute__((used)) int gp3_snd_lock(volatile uint8_t *f) __asm__("gp3_snd_lock");
+__attribute__((used)) int gp3_snd_lock(volatile uint8_t *f) {
+    for (int i = 0; i < 260; i++) {   /* about 60 ms at most, then the game's own "busy" answer */
+        if (__sync_bool_compare_and_swap(f, 0, 1)) {
+            if (i && ++g_snd_waits <= 3) LOG("sound lock fix: the game thread waited for the sound timer (%d tries) - the moment that used to crash", i);
+            return 0;
+        }
+        if (i < 20) __builtin_ia32_pause(); else snd_yield(i);
+    }
+    if (++g_snd_timeouts <= 3) LOG("sound lock fix: sound still busy after about 60 ms, the game carries on as before");
+    return 5;
+}
+/* replaces the game's "try to take the flag" function (thiscall, object in ecx; 0 = taken, 5 = busy) */
+__attribute__((naked)) static void snd_lock_stub(void) {
+    __asm__ volatile("push %ecx\n lea 0x1b(%ecx), %eax\n push %eax\n call gp3_snd_lock\n add $4, %esp\n pop %ecx\n ret\n");
+}
+/* the timer thread's test-and-set (object in edi): return to +0xc past the call when taken */
+__attribute__((naked)) static void snd_mix_stub(void) {
+    __asm__ volatile("mov $1, %al\n xchg %al, 0x1b(%edi)\n test %al, %al\n jnz 1f\n addl $0xc, (%esp)\n 1: ret\n");
+}
+uint32_t gp3_snd_lock_waits(void) { return g_snd_waits; }
+void gp3_fix_sound_lock(void) {
+    const gp3_addrs_t *A = gp3_addrs();
+    if (!A || A->fov_site != 0x490944) return;                    /* GP3 2000 only (1.13 has no such code) */
+    static const uint8_t want_lock[] = { 0x53,0x8a,0x59,0x1b,0xb2,0x01,0x33,0xc0,0x3a,0xda,0x5b,0x75,0x0e,0x40,0x3d,0xb8,0x0b,0x00,0x00,0x7e,0xf8,0xb8,0x05,0x00,0x00,0x00,0xc3,0x88,0x51,0x1b,0x33,0xc0,0xc3 };
+    static const uint8_t want_mix[] = { 0x80,0x7f,0x1b,0x01,0x75,0x0b };
+    uint8_t *lk = (uint8_t *)(uintptr_t)0x53df90, *mx = (uint8_t *)(uintptr_t)0x53d3b7;
+    if (memcmp(lk, want_lock, sizeof want_lock) || memcmp(mx, want_mix, sizeof want_mix)) { LOG("sound lock fix: code differs, not applied"); return; }
+    uint8_t j[5]; j[0] = 0xe9; int32_t rel = (int32_t)((uintptr_t)snd_lock_stub - (uintptr_t)(lk + 5)); memcpy(j + 1, &rel, 4);
+    uint8_t c[6]; c[0] = 0xe8; rel = (int32_t)((uintptr_t)snd_mix_stub - (uintptr_t)(mx + 5)); memcpy(c + 1, &rel, 4); c[5] = 0x90;
+    if (plat_patch_code(lk, j, 5) == 0 && plat_patch_code(mx, c, 6) == 0) LOG("sound lock fix: on (GP3 2000 crash at +0x13d49b in long races)");
+}

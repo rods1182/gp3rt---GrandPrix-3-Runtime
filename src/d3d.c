@@ -33,9 +33,46 @@ typedef struct sx {
     int cpu_valid, gpu_valid;      /* location of the latest colour data */
     uint8_t *dirty; int dirty_h, ndirty;   /* rows modified on the CPU, not yet uploaded */
     uint8_t *rowok;                        /* rows whose CPU copy is current (when !cpu_valid) */
+    int rowok_any;                         /* some row of rowok may be set (saves clearing it at every draw) */
     uint8_t *ovl; int novl;                /* overlay rows: CPU memory holds key + new pixels, not yet composited */
     uint64_t tex_hash;                     /* content of the last texture upload */
+    struct tpool *pe;                      /* shared texture (content cache) this surface currently shows */
 } sx_t;
+
+/* Texture content cache. GP3 keeps its track and car textures in a small set of
+ * texture surfaces and refills them as the view changes, so the same pictures
+ * come back again and again. Each uploaded picture is kept by its content hash;
+ * when a surface is refilled with a picture seen before, its GPU texture is
+ * reused instead of converting and uploading it again. Pictures no surface shows
+ * are dropped oldest-first above a memory budget. */
+typedef struct tpool { uint64_t key; int w, h, levels, refs; rtex_t *t; uint64_t last; struct tpool *next; } tpool_t;
+#define TP_BUCKETS 4096
+static tpool_t *g_tp[TP_BUCKETS];
+static size_t g_tp_bytes; static uint64_t g_tp_tick; static uint32_t g_tex_reused;
+static size_t g_tp_budget = (size_t)64 << 20;   /* keeps the 32-bit game's address space in mind */
+static size_t tp_size(int w, int h, int levels) { return (size_t)w * h * 4 * (levels > 1 ? 4 : 3) / 3; }
+static tpool_t *tp_find(uint64_t key, int w, int h, int levels) {
+    for (tpool_t *e = g_tp[key % TP_BUCKETS]; e; e = e->next)
+        if (e->key == key && e->w == w && e->h == h && e->levels == levels) return e;
+    return NULL;
+}
+static void tp_unlink(tpool_t *v) {
+    tpool_t **pp = &g_tp[v->key % TP_BUCKETS];
+    while (*pp && *pp != v) pp = &(*pp)->next;
+    if (*pp) *pp = v->next;
+    g_tp_bytes -= tp_size(v->w, v->h, v->levels);
+}
+/* oldest picture no surface shows (optionally of a given size), or NULL */
+static tpool_t *tp_victim(int w, int h, int levels) {
+    tpool_t *best = NULL;
+    for (int b = 0; b < TP_BUCKETS; b++)
+        for (tpool_t *e = g_tp[b]; e; e = e->next)
+            if (!e->refs && (!w || (e->w == w && e->h == h && e->levels == levels)) && (!best || e->last < best->last)) best = e;
+    return best;
+}
+static void tp_release(sx_t *x) {
+    if (x->pe) { x->pe->refs--; x->pe->last = ++g_tp_tick; x->pe = NULL; x->tex = NULL; }
+}
 
 static sx_t *sx_of(ddsurf_t *s) {
     if (!s->gpu) s->gpu = calloc(1, sizeof(sx_t)), ((sx_t *)s->gpu)->cpu_valid = 1;
@@ -57,8 +94,32 @@ static inline uint32_t pack8(uint32_t c, uint32_t m) {
     uint32_t x = bits >= 8 ? c << (bits - 8) : c >> (8 - bits);
     return (x << sh) & m;
 }
+/* 16-bit pixel -> ARGB lookup table for the last 16-bit format seen (textures are converted often) */
+static uint32_t *g_lut16; static uint32_t g_lut_key[5];
+static const uint32_t *lut16_for(ddsurf_t *s) {
+    uint32_t am = (s->pf.flags & DDPF_ALPHAPIXELS) ? s->pf.amask : 0;
+    uint32_t key[5] = { s->pf.rmask, s->pf.gmask, s->pf.bmask, am, 1 };
+    if (g_lut16 && !memcmp(key, g_lut_key, sizeof key)) return g_lut16;
+    if (!g_lut16) g_lut16 = malloc(65536 * 4);
+    if (!g_lut16) return NULL;
+    for (uint32_t v = 0; v < 65536; v++) {
+        uint32_t a = am ? chan8(v, am) : 255;
+        g_lut16[v] = a << 24 | chan8(v, s->pf.rmask) << 16 | chan8(v, s->pf.gmask) << 8 | chan8(v, s->pf.bmask);
+    }
+    memcpy(g_lut_key, key, sizeof key);
+    return g_lut16;
+}
 static void surf_to_argb(ddsurf_t *s, uint32_t *out, int ck) {
     uint32_t klo = s->ck_src.lo, khi = s->ck_src.hi < s->ck_src.lo ? s->ck_src.lo : s->ck_src.hi;
+    const uint32_t *lut;
+    if (s->bpp == 16 && (lut = lut16_for(s))) {
+        for (int y = 0; y < s->h; y++) {
+            const uint16_t *row = (const uint16_t *)(s->bits + (ptrdiff_t)y * s->pitch);
+            if (ck) for (int x = 0; x < s->w; x++) { uint32_t v = row[x], c = lut[v]; *out++ = (v >= klo && v <= khi) ? c & 0x00ffffffu : c; }
+            else for (int x = 0; x < s->w; x++) *out++ = lut[row[x]];
+        }
+        return;
+    }
     for (int y = 0; y < s->h; y++) {
         uint8_t *row = s->bits + (ptrdiff_t)y * s->pitch;
         for (int x = 0; x < s->w; x++) {
@@ -118,9 +179,9 @@ static void stats_tick(void) {
     if (!g_st.t0) g_st.t0 = now;
     if (now - g_st.t0 < 5000000) return;
     double sec = (now - g_st.t0) / 1e6;
-    LOG("stats/s: presents %.1f draws %.0f full-downloads %.1f upload-batches %.1f rows-read %.0f rows-written %.0f tex-uploads %.1f (%.1f MB) untouched-locks %.1f context-moves %.1f tex-unchanged %.0f overlay-mpx %.2f gpu-copies %.0f gl-batches %.0f overlay-rows %.0f shadow-traps %.0f | ms/s read %.0f upload %.0f draw %.0f tex %.0f present %.0f lock %.0f ctx %.0f api-draw %.0f upload-gl %.0f (in draws: deferred %.0f lockwait %.0f gpuneed %.0f prep %.0f list %.0f tail %.0f) | overlay flushes/s %.0f present-calls/s %.0f",
+    LOG("stats/s: presents %.1f draws %.0f full-downloads %.1f upload-batches %.1f rows-read %.0f rows-written %.0f tex-uploads %.1f (%.1f MB) untouched-locks %.1f context-moves %.1f tex-unchanged %.0f tex-reused %.0f tex-cache %.0f MB overlay-mpx %.2f gpu-copies %.0f gl-batches %.0f overlay-rows %.0f shadow-traps %.0f | ms/s read %.0f upload %.0f draw %.0f tex %.0f present %.0f lock %.0f ctx %.0f api-draw %.0f upload-gl %.0f (in draws: deferred %.0f lockwait %.0f gpuneed %.0f prep %.0f list %.0f tail %.0f) | overlay flushes/s %.0f present-calls/s %.0f",
         g_st.presents / sec, g_st.draws / sec, g_st.downloads / sec, g_st.uploads / sec, g_rows_loaded / sec, g_rows_uploaded / sec,
-        g_st.tex_uploads / sec, g_st.tex_bytes / sec / 1e6, g_guard_skipped / sec, g_ctx_moves / sec, g_tex_same / sec, g_ovl_px / sec / 1e6, g_gpu_copies / sec, rdr_batches_take() / sec, g_ovl_rows / sec, g_shadow_traps / sec,
+        g_st.tex_uploads / sec, g_st.tex_bytes / sec / 1e6, g_guard_skipped / sec, g_ctx_moves / sec, g_tex_same / sec, g_tex_reused / sec, g_tp_bytes / 1e6, g_ovl_px / sec / 1e6, g_gpu_copies / sec, rdr_batches_take() / sec, g_ovl_rows / sec, g_shadow_traps / sec,
         g_t_read / sec / 1000, g_t_upload / sec / 1000, g_t_draw / sec / 1000, g_t_tex / sec / 1000, g_t_present / sec / 1000, g_t_lock / sec / 1000, g_t_ctx / sec / 1000, g_t_front / sec / 1000, g_t_ovl_gl / sec / 1000, g_t_deferred / sec / 1000, g_t_lockwait / sec / 1000, g_t_gpuneed / sec / 1000, g_t_prep / sec / 1000, g_t_list / sec / 1000, g_t_tail / sec / 1000, g_ovl_flushes / sec, g_present_calls / sec);
     if (g_rb_site[0]) {
         char b[256]; int o = 0;
@@ -128,7 +189,7 @@ static void stats_tick(void) {
         if (o) LOG("read-back rows by game call site:%s", b);
         memset(g_rb_rows, 0, sizeof g_rb_rows);
     }
-    g_guard_skipped = 0; g_ctx_moves = 0; g_gpu_copies = 0; g_ovl_rows = 0; g_ovl_px = 0; g_tex_same = 0; g_shadow_traps = 0; g_t_read = g_t_upload = g_t_draw = g_t_tex = g_t_present = g_t_lock = 0; g_t_ctx = 0; g_t_front = 0; g_t_ovl_gl = 0; g_ovl_flushes = 0; g_t_deferred = g_t_lockwait = g_t_gpuneed = g_t_prep = g_t_list = g_t_tail = 0; g_present_calls = 0; g_rows_loaded = 0; g_rows_uploaded = 0;
+    g_guard_skipped = 0; g_ctx_moves = 0; g_gpu_copies = 0; g_ovl_rows = 0; g_ovl_px = 0; g_tex_same = 0; g_tex_reused = 0; g_shadow_traps = 0; g_t_read = g_t_upload = g_t_draw = g_t_tex = g_t_present = g_t_lock = 0; g_t_ctx = 0; g_t_front = 0; g_t_ovl_gl = 0; g_ovl_flushes = 0; g_t_deferred = g_t_lockwait = g_t_gpuneed = g_t_prep = g_t_list = g_t_tail = 0; g_present_calls = 0; g_rows_loaded = 0; g_rows_uploaded = 0;
     memset(&g_st, 0, sizeof g_st); g_st.t0 = now;
 }
 /* ------------------------------------------------------------------ */
@@ -152,7 +213,7 @@ static void flush_dirty(ddsurf_t *s);
 static void mark_row_dirty(sx_t *x, int r) {
     if (!x->dirty) return;
     if (!x->dirty[r]) { x->dirty[r] = 1; x->ndirty++; }
-    x->rowok[r] = 1;
+    x->rowok[r] = 1; x->rowok_any = 1;
     x->gpu_valid = 0;
 }
 static void ensure_dirty_map(ddsurf_t *s, sx_t *x) {
@@ -184,7 +245,7 @@ static void load_rows(ddsurf_t *s, int y0, int n) {
       int i; for (i = 0; i < 16 && g_rb_site[i] && g_rb_site[i] != g_dd_caller; i++) {}
       if (i < 16) { g_rb_site[i] = g_dd_caller; g_rb_rows[i] += n; } }
     ensure_dirty_map(s, x);
-    memset(x->rowok + y0, 1, n);
+    memset(x->rowok + y0, 1, n); x->rowok_any = 1;
 }
 
 static int guard_ok(ddsurf_t *s) {
@@ -605,7 +666,7 @@ static rtarget_t *gpu_need(ddsurf_t *s) {
 }
 static void gpu_written(ddsurf_t *s) {
     sx_t *x = sx_of(s); x->gpu_valid = 1; x->cpu_valid = 0;
-    if (x->rowok) memset(x->rowok, 0, s->h);
+    if (x->rowok && x->rowok_any) { memset(x->rowok, 0, s->h); x->rowok_any = 0; }
 }
 
 /* hooks called from ddraw.c */
@@ -825,7 +886,8 @@ int d3d_present_hook(ddsurf_t *front) {
 void d3d_surface_released(ddsurf_t *s) {
     sx_t *x = s->gpu;
     if (!x) return;
-    if (x->tex && g_rdr) g_rdr->tex_destroy(x->tex);
+    if (x->pe) tp_release(x);
+    else if (x->tex && g_rdr) g_rdr->tex_destroy(x->tex);
     if (x->tgt && g_rdr) g_rdr->target_destroy(x->tgt);
     if (g_guard.s == s) { plat_protect(g_guard.base, g_guard.len, 2); free(g_guard.rows); g_guard.rows = NULL; g_guard.s = NULL; }
     free(x->dirty); free(x->rowok); free(x->ovl);
@@ -838,19 +900,40 @@ void d3d_depth_fill(ddsurf_t *z, RECT r, uint32_t v);
 /* textures                                                             */
 static void dilate_keyed(uint32_t *p, int w, int h) {
     /* give transparent texels the colour of an opaque neighbour so that
-     * bilinear filtering does not produce dark fringes */
-    for (int pass = 0; pass < 2; pass++)
-        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
-            uint32_t *c = &p[y * w + x];
-            if (*c >> 24) continue;
-            int r = 0, g = 0, b = 0, n = 0;
-            for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) {
-                int X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
-                uint32_t q = p[Y * w + X];
-                if (q >> 24) { r += (q >> 16) & 255; g += (q >> 8) & 255; b += q & 255; n++; }
-            }
-            if (n) *c = (uint32_t)(r / n) << 16 | (uint32_t)(g / n) << 8 | (uint32_t)(b / n);
+     * bilinear filtering does not produce dark fringes. Filled texels stay
+     * transparent, so one ring is all a second pass could ever reach; rows with
+     * nothing transparent or nothing opaque nearby are skipped. */
+    static uint8_t *rowkey; static int rowcap;
+    if (h + 2 > rowcap) { free(rowkey); rowcap = h + 64; rowkey = malloc(rowcap); if (!rowkey) { rowcap = 0; return; } }
+    {
+        /* rowkey[y]: 1 if row y has a transparent texel, 2 if it also has an opaque one */
+        int any = 0;
+        for (int y = 0; y < h; y++) {
+            const uint32_t *r = p + (size_t)y * w; uint32_t a_or = 0, a_and = 0xffffffffu;
+            for (int x = 0; x < w; x++) { a_or |= r[x]; a_and &= r[x] | 0x00ffffffu; }
+            int t = (a_and >> 24) != 0xff ? 1 : 0;   /* some texel has alpha below 255: may be transparent */
+            if (t) { int z = 0; for (int x = 0; x < w; x++) if (!(r[x] >> 24)) { z = 1; break; } t = z; }
+            rowkey[y] = (uint8_t)(t | ((a_or >> 24) ? 2 : 0));
+            any |= t;
         }
+        if (!any) return;
+        for (int y = 0; y < h; y++) {
+            if (!(rowkey[y] & 1)) continue;
+            if (!((rowkey[y] | (y > 0 ? rowkey[y - 1] : 0) | (y + 1 < h ? rowkey[y + 1] : 0)) & 2)) continue;   /* nothing opaque nearby */
+            int y0 = y > 0 ? y - 1 : y, y1 = y + 1 < h ? y + 1 : y;
+            for (int x = 0; x < w; x++) {
+                uint32_t *c = &p[(size_t)y * w + x];
+                if (*c >> 24) continue;
+                int x0 = x > 0 ? x - 1 : x, x1 = x + 1 < w ? x + 1 : x;
+                int r = 0, g = 0, b = 0, n = 0;
+                for (int Y = y0; Y <= y1; Y++) for (int X = x0; X <= x1; X++) {
+                    uint32_t q = p[(size_t)Y * w + X];
+                    if (q >> 24) { r += (q >> 16) & 255; g += (q >> 8) & 255; b += q & 255; n++; }
+                }
+                if (n) *c = (uint32_t)(r / n) << 16 | (uint32_t)(g / n) << 8 | (uint32_t)(b / n);
+            }
+        }
+    }
 }
 static uint32_t tex_version(ddsurf_t *s) {
     uint32_t v = s->version * 31u + (uint32_t)s->has_ck_src * 7u + s->ck_src.lo;
@@ -880,13 +963,40 @@ static rtex_t *tex_get(ddsurf_t *s) {
         return x->tex;
     }
     x->tex_hash = hsh;
-    if (!x->tex || x->tex_w != s->w || x->tex_h != s->h || x->tex_levels != levels) {
+    static int tp_off = -1;
+    if (tp_off < 0) { const char *e = getenv("GP3_TEXCACHE_MB"); tp_off = e && atoi(e) == 0; if (e) g_tp_budget = (size_t)atoi(e) << 20; }
+    int pooled = !x->tgt && !tp_off;   /* rendered-to textures keep their own; GP3_TEXCACHE_MB=0 turns the cache off */
+    if (pooled) {
+        if (s->pal) hsh = (hsh ^ (uint64_t)(uintptr_t)s->pal ^ ((uint64_t)s->pal->version << 40)) * 0x100000001b3ull;
+        tp_release(x);
+        if (x->tex) { RDR->tex_destroy(x->tex); x->tex = NULL; }   /* a texture from before the cache was used */
+        tpool_t *e = tp_find(hsh, s->w, s->h, levels);
+        x->tex_w = s->w; x->tex_h = s->h; x->tex_levels = levels; x->tex_ver = ver;
+        if (e) {
+            e->refs++; x->pe = e; x->tex = e->t; g_tex_reused++;
+            return x->tex;
+        }
+        /* new picture: take the GPU texture of an old unused one of the same size when over budget */
+        tpool_t *v = g_tp_bytes + tp_size(s->w, s->h, levels) > g_tp_budget ? tp_victim(s->w, s->h, levels) : NULL;
+        if (v) tp_unlink(v);
+        else v = calloc(1, sizeof *v), v->t = RDR->tex_create(s->w, s->h, levels);
+        v->key = hsh; v->w = s->w; v->h = s->h; v->levels = levels; v->refs = 1; v->last = ++g_tp_tick;
+        v->next = g_tp[hsh % TP_BUCKETS]; g_tp[hsh % TP_BUCKETS] = v; g_tp_bytes += tp_size(v->w, v->h, v->levels);
+        while (g_tp_bytes > g_tp_budget) {   /* drop the oldest unused pictures */
+            tpool_t *d = tp_victim(0, 0, 0);
+            if (!d) break;
+            tp_unlink(d); RDR->tex_destroy(d->t); free(d);
+        }
+        x->pe = v; x->tex = v->t;
+    } else if (x->pe || !x->tex || x->tex_w != s->w || x->tex_h != s->h || x->tex_levels != levels) {
+        if (x->pe) tp_release(x);
         if (x->tex) RDR->tex_destroy(x->tex);
         x->tex = RDR->tex_create(s->w, s->h, levels);
         x->tex_w = s->w; x->tex_h = s->h; x->tex_levels = levels;
     }
     int lvl = 0;
     g_st.tex_uploads++; g_st.tex_bytes += s->w * s->h * 4;
+    { static int tl = -1; if (tl < 0) tl = getenv("GP3_TEXLOG") != NULL; if (tl) LOG("texup %p %dx%d bpp %d lv %d ck %d hash %016llx ver %u", (void *)s, s->w, s->h, s->bpp, levels, s->has_ck_src, (unsigned long long)x->tex_hash, ver); }
     if (g_trace_d3d) { extern void *g_dd_caller; DTRACE("tex upload %p %dx%d ver %u (last dd caller %p)", (void *)s, s->w, s->h, ver, g_dd_caller); }
     uint64_t tt0 = rt_now_us();
     for (ddsurf_t *m = s; m; m = m->mip_next, lvl++) {

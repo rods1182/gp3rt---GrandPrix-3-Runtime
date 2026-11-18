@@ -219,6 +219,17 @@ static void force_foreground(void) {
     BringWindowToTop(g_hwnd); SetForegroundWindow(g_hwnd); SetFocus(g_hwnd);
     if (att) AttachThreadInput(me, fgt, FALSE);
 }
+/* the foreground window is one the player cannot see: hidden, minimised, or under our
+ * full-screen window (e.g. a browser window activated by itself in the background) */
+static int fg_unseen(HWND fg) {
+    if (!fg) return 1;
+    HWND top = GetAncestor(fg, 2 /* GA_ROOT */); if (top) fg = top;
+    if (!IsWindowVisible(fg) || IsIconic(fg)) return 1;
+    int n = 0;
+    for (HWND w = GetWindow(g_hwnd, 2 /* GW_HWNDNEXT */); w && n < 4096; w = GetWindow(w, 2), n++) if (w == fg) return 1;
+    return 0;
+}
+static DWORD g_fg_unseen_t; static int g_fg_unseen_n;
 static void focus_guard(void) {
     DWORD now = GetTickCount();
     if (!g_t_start) g_t_start = now;
@@ -238,6 +249,18 @@ static void focus_guard(void) {
             g_fg_logged = 0;
         }
     } else if (fg == g_hwnd) g_fg_logged = 0;
+    /* in full screen, keyboard and mouse go to the foreground window: if that window is hidden
+     * behind the game the player sees the game but it no longer answers. Take the focus back
+     * (Alt+Tab brings the other window in front of the game, so it is not affected). */
+    if (fg != g_hwnd && !g_wcfg.windowed && !IsIconic(g_hwnd) && fg_unseen(fg)) {
+        if (!g_fg_unseen_t) g_fg_unseen_t = now;
+        else if (now - g_fg_unseen_t >= 750 && g_fg_unseen_n < 200) {
+            g_fg_unseen_n++; g_fg_unseen_t = 0;
+            force_foreground();
+            LOG("focus: the foreground window was hidden behind the game: focus taken back -> %s", GetForegroundWindow() == g_hwnd ? "ok" : "refused by Windows");
+            g_fg_logged = 0;
+        }
+    } else g_fg_unseen_t = 0;
     if (now - g_in_last_log >= 10000) {
         if (g_in_last_log) LOG("input/10s: %u messages, %u keys, %u mouse; swap avg %.1f ms max %.1f ms; foreground %s",
                                g_n_msgs, g_n_keys, g_n_mouse, g_swap_n ? g_swap_sum_us / 1000.0 / g_swap_n : 0.0, g_swap_max_us / 1000.0,
@@ -255,6 +278,7 @@ static DWORD WINAPI close_later(void *p) {
 static LRESULT WINAPI sub_proc2(HWND h, UINT m, WPARAM w, LPARAM l) {
     g_n_msgs++;
     if (m == 0x100 || m == 0x104) g_n_keys++;
+    if ((m == 0x201 || m == 0x204) && !g_wcfg.windowed && GetForegroundWindow() != h) { force_foreground(); LOG("focus: click on the game window: focus taken back -> %s", GetForegroundWindow() == h ? "ok" : "refused by Windows"); }
     else if (m >= 0x200 && m <= 0x20A) g_n_mouse++;
     else if (m == 0x1C || m == 0x06 || m == 0x07 || m == 0x08) LOG("focus: %s %s", m == 0x1C ? "WM_ACTIVATEAPP" : m == 0x06 ? "WM_ACTIVATE" : m == 0x07 ? "WM_SETFOCUS" : "WM_KILLFOCUS",
                                                                (m == 0x07 || ((m == 0x1C || m == 0x06) && (w & 0xffff))) ? "(gained)" : "(lost)");
@@ -695,6 +719,27 @@ static DWORD WINAPI watchdog_main(void *arg) {
         {   /* a launcher can also restrict the CPU cores after the game started */
             static DWORD last_aff; extern int win_fix_affinity(int quiet);
             if (now - last_aff >= 1000) { last_aff = now; win_fix_affinity(1); }
+        }
+        if (g_hwnd && GetForegroundWindow() == g_hwnd && (GetAsyncKeyState(0x78) & 1) && GetAsyncKeyState(0x11) < 0) {
+            /* Ctrl+F9: diagnostic snapshot of the game's state (Gp3.exe data section) to <game>\screens,
+             * to find what a saved game does not keep (wet track, lap statistics...) */
+            extern char g_game_dir[]; static int n;
+            unsigned char *m = (unsigned char *)GetModuleHandleA(NULL);
+            unsigned char *nt = m + *(uint32_t *)(m + 0x3c);
+            int nsec = *(uint16_t *)(nt + 6); unsigned char *sec = nt + 0x18 + *(uint16_t *)(nt + 0x14);
+            char fn[1200]; snprintf(fn, sizeof fn, "%s\\screens", g_game_dir); plat_mkdir(fn);
+            snprintf(fn, sizeof fn, "%s\\screens\\memdump-%lu-%d.bin", g_game_dir, (unsigned long)(GetTickCount() / 1000), ++n);
+            FILE *f = fopen(fn, "wb");
+            if (f) {
+                unsigned long total = 0;
+                for (int i = 0; i < nsec; i++, sec += 40) {
+                    if (!(*(uint32_t *)(sec + 36) & 0x80000000u)) continue;   /* writable sections only */
+                    uint32_t hdr[2] = { (uint32_t)(uintptr_t)(m + *(uint32_t *)(sec + 12)), *(uint32_t *)(sec + 8) };
+                    fwrite(hdr, 4, 2, f); total += fwrite((void *)(uintptr_t)hdr[0], 1, hdr[1], f);
+                }
+                fclose(f);
+                LOG("memory snapshot (Ctrl+F9): %s, %lu bytes", fn, total);
+            }
         }
         if (g_hwnd && GetForegroundWindow() == g_hwnd && (GetAsyncKeyState(0x7A) & 1) && GetAsyncKeyState(0x11) < 0) {
             extern void rdr_framedump_arm(void); rdr_framedump_arm(); g_shot_pending = 1; LOG("frame dump requested (Ctrl+F11, polled)");

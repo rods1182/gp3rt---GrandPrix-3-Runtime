@@ -139,7 +139,7 @@ typedef ptrdiff_t GLsizeiptr, GLintptr;
     F(void, glBindBuffer, (GLenum, GLuint)) F(void, glBufferData, (GLenum, GLsizeiptr, const void *, GLenum)) \
     F(void, glBufferSubData, (GLenum, GLintptr, GLsizeiptr, const void *)) \
     F(void, glVertexAttribPointer, (GLuint, GLint, GLenum, GLboolean, GLsizei, const void *)) \
-    F(void, glEnableVertexAttribArray, (GLuint)) F(void, glDrawElements, (GLenum, GLsizei, GLenum, const void *)) \
+    F(void, glEnableVertexAttribArray, (GLuint)) F(void, glDrawElements, (GLenum, GLsizei, GLenum, const void *)) F(void, glDrawElementsBaseVertex, (GLenum, GLsizei, GLenum, const void *, GLint)) \
     F(void, glDrawArrays, (GLenum, GLint, GLsizei)) F(GLenum, glGetError, (void)) F(void, glFinish, (void)) F(void, glFlush, (void)) \
     F(void, glGetIntegerv, (GLenum, GLint *)) F(const GLubyte *, glGetString, (GLenum)) F(void, glProvokingVertex, (GLenum))
 
@@ -158,7 +158,7 @@ static void glog(const char *fmt, ...) {
 }
 
 /* ------------------------------------------------------------------ */
-struct rtex { GLuint id; int w, h, levels, have_mips; GLint p_mag, p_min, p_ws, p_wt; float p_aniso, p_lod; uint32_t p_border; int p_set; };
+struct rtex { GLuint id; int w, h, levels, have_mips, auto_mips; GLint p_mag, p_min, p_ws, p_wt; float p_aniso, p_lod; uint32_t p_border; int p_set; };
 struct rtarget { int w, h, sw, sh; GLuint fbo, color, depth; GLuint fbo_small, color_small; unsigned gen, small_gen; };
 
 static void batch_flush(void);
@@ -172,7 +172,7 @@ static GLuint g_up_tex[UP_RING]; static int g_up_w[UP_RING], g_up_h[UP_RING], g_
 #define g_upload_tex g_up_tex[g_up_cur]
 #define g_upload_w g_up_w[g_up_cur]
 #define g_upload_h g_up_h[g_up_cur]
-static GLint g_quad_u_tex, g_quad_u_rect, g_quad_u_flipv, g_quad_u_keyed;
+static GLint g_quad_u_tex, g_quad_u_rect, g_quad_u_flipv, g_quad_u_keyed, g_quad_u_uvrect;
 
 /* ------------------------------------------------------------------ */
 static GLuint compile(GLenum type, const char *src) {
@@ -327,30 +327,87 @@ static prog_t *get_prog(const pkey_t *k) {
 }
 
 /* ------------------------------------------------------------------ */
+static int mip_count(int w, int h) { int n = 1; while (w > 1 || h > 1) { w = w > 1 ? w / 2 : 1; h = h > 1 ? h / 2 : 1; n++; } return n; }
 static rtex_t *g_tex_create(int w, int h, int levels) {
     batch_flush(); gl_state_stale();
     rtex_t *t = calloc(1, sizeof *t);
     t->w = w; t->h = h; t->levels = levels;
+    /* textures the game gives without a mip chain get one made here: all its levels are
+     * allocated now, so filling them later never makes the driver rebuild the texture */
+    if (levels == 1 && g_gen_mips && (w > 1 || h > 1) && (w & (w - 1)) == 0 && (h & (h - 1)) == 0) t->auto_mips = mip_count(w, h);
+    int n = t->auto_mips ? t->auto_mips : levels;
     glGenTextures(1, &t->id);
     glBindTexture(GL_TEXTURE_2D, t->id);
     int lw = w, lh = h;
-    for (int i = 0; i < levels; i++) {
+    for (int i = 0; i < n; i++) {
         glTexImage2D(GL_TEXTURE_2D, i, GL_RGBA8, lw, lh, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
         lw = lw > 1 ? lw / 2 : 1; lh = lh > 1 ? lh / 2 : 1;
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, levels - 1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, n - 1);
     return t;
 }
+/* next mip level: 2x2 box filter (what glGenerateMipmap does), on the CPU - on some
+ * drivers (Intel) glGenerateMipmap per texture upload costs milliseconds */
+static void mip_down(const uint32_t *s, int sw, int sh, uint32_t *d, int dw, int dh) {
+    int fx = sw > dw ? 2 : 1, fy = sh > dh ? 2 : 1;
+    for (int y = 0; y < dh; y++) {
+        const uint32_t *r0 = s + (size_t)(y * fy) * sw, *r1 = r0 + (fy > 1 ? sw : 0);
+        for (int x = 0; x < dw; x++) {
+            uint32_t a = r0[x * fx], b = r0[x * fx + fx - 1], c = r1[x * fx], e = r1[x * fx + fx - 1];
+            uint32_t lo = ((a & 0x00ff00ff) + (b & 0x00ff00ff) + (c & 0x00ff00ff) + (e & 0x00ff00ff) + 0x00020002) >> 2 & 0x00ff00ff;
+            uint32_t hi = (((a >> 8) & 0x00ff00ff) + ((b >> 8) & 0x00ff00ff) + ((c >> 8) & 0x00ff00ff) + ((e >> 8) & 0x00ff00ff) + 0x00020002) >> 2 & 0x00ff00ff;
+            d[(size_t)y * dw + x] = lo | hi << 8;
+        }
+    }
+}
+static uint32_t *g_mipbuf; static size_t g_mipcap;
+/* Texture pixels go through pixel-unpack buffers (PBOs): the driver takes a plain copy and
+ * moves it into the texture on the GPU later, instead of converting it into the texture's
+ * memory layout on the processor while the game waits (slow on Intel graphics). */
+static GLuint g_tpbo[4]; static int g_tpbo_i, g_tex_pbo = 0;   /* off: measured no gain on Intel UHD 630 (teste7); GP3_TEX_PBO=1 to try */
 static void g_tex_upload(rtex_t *t, int level, int w, int h, const uint32_t *argb) {
     batch_flush(); gl_state_stale();
     glBindTexture(GL_TEXTURE_2D, t->id);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, argb);
-    if (level == 0 && t->levels == 1 && g_gen_mips && w > 1 && h > 1 && (w & (w - 1)) == 0 && (h & (h - 1)) == 0) {
-        /* generated mip chain for textures the game supplied without one (only used when the game asks for mip filtering
-         * or when filtering is forced by the user) */
-        int n = 1; for (int a = w, b = h; a > 1 || b > 1; a = a > 1 ? a / 2 : 1, b = b > 1 ? b / 2 : 1) n++;
+    int automip = level == 0 && t->auto_mips > 1 && w == t->w && h == t->h;
+    size_t n0 = (size_t)w * h, nm = 0;
+    if (automip) {
+        size_t need = n0 / 2 + 4;
+        if (need > g_mipcap) { free(g_mipbuf); g_mipbuf = malloc(need * 4); g_mipcap = g_mipbuf ? need : 0; }
+        if (!g_mipbuf) automip = 0;
+    }
+    /* the whole mip chain, packed after level 0 in g_mipbuf */
+    int nlev = 1, lw[20], lh[20]; size_t off[20];
+    lw[0] = w; lh[0] = h; off[0] = 0;
+    if (automip) {
+        const uint32_t *src = argb; int sw = w, sh = h; size_t o = 0;
+        for (int i = 1; i < t->auto_mips && i < 20; i++) {
+            int dw = sw > 1 ? sw / 2 : 1, dh = sh > 1 ? sh / 2 : 1;
+            mip_down(src, sw, sh, g_mipbuf + o, dw, dh);
+            lw[i] = dw; lh[i] = dh; off[i] = o; src = g_mipbuf + o; o += (size_t)dw * dh; sw = dw; sh = dh; nlev++;
+        }
+        nm = o;
+    }
+    if (g_tex_pbo && n0 >= 1024) {
+        if (!g_tpbo[0]) glGenBuffers(4, g_tpbo);
+        GLuint pb = g_tpbo[g_tpbo_i++ & 3];
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pb);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, (GLsizeiptr)((n0 + nm) * 4), NULL, GL_STREAM_DRAW);
+        glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, (GLsizeiptr)(n0 * 4), argb);
+        if (nm) glBufferSubData(GL_PIXEL_UNPACK_BUFFER, (GLintptr)(n0 * 4), (GLsizeiptr)(nm * 4), g_mipbuf);
+        glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, (const void *)0);
+        for (int i = 1; i < nlev; i++)
+            glTexSubImage2D(GL_TEXTURE_2D, i, 0, 0, lw[i], lh[i], GL_BGRA, GL_UNSIGNED_BYTE, (const void *)(uintptr_t)((n0 + off[i]) * 4));
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    } else {
+        glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, argb);
+        for (int i = 1; i < nlev; i++) glTexSubImage2D(GL_TEXTURE_2D, i, 0, 0, lw[i], lh[i], GL_BGRA, GL_UNSIGNED_BYTE, g_mipbuf + off[i]);
+    }
+    if (automip) t->have_mips = 1;
+    else if (level == 0 && t->auto_mips > 1) { glGenerateMipmap(GL_TEXTURE_2D); t->have_mips = 1; }
+    else if (level == 0 && t->levels == 1 && g_gen_mips && w > 1 && h > 1 && (w & (w - 1)) == 0 && (h & (h - 1)) == 0) {
+        int n = mip_count(w, h);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, n - 1);
         glGenerateMipmap(GL_TEXTURE_2D);
         t->have_mips = 1;
@@ -466,9 +523,9 @@ static void g_target_upload(rtarget_t *t, const uint32_t *argb, int pitch_px, in
     float u1 = (float)w / g_upload_w, v1 = (float)h / g_upload_h;
     (void)u1; (void)v1;
     glUseProgram(g_quad_prog);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, (float)w / g_upload_w, (float)h / g_upload_h);
+    glUniform4f(g_quad_u_uvrect, 0, 0, (float)w / g_upload_w, (float)h / g_upload_h);
     quad(g_upload_tex, (float)x * g_scale, (float)y * g_scale, (float)(x + w) * g_scale, (float)(y + h) * g_scale, t->sw, t->sh, 0, 0, 0);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, 1, 1);
+    glUniform4f(g_quad_u_uvrect, 0, 0, 1, 1);
 }
 static void g_target_download(rtarget_t *t, uint32_t *argb, int pitch_px, int y0, int n) {
     batch_flush(); gl_state_stale();
@@ -541,7 +598,7 @@ static struct {
 } gs;
 static size_t g_vbo_off, g_ibo_off;
 static void gl_state_stale(void) { gs.valid = 0; }
-static void draw_now(rtarget_t *t, const rstate_t *s, int prim, const rvert_t *v, int nv, uint32_t *idx, int ni) {
+static void apply_state(rtarget_t *t, const rstate_t *s) {
     if (!gs.valid) {
         memset(&gs, 0, sizeof gs); gs.zt = gs.zm = gs.po = gs.bl = gs.cu = gs.sc_on = -1; gs.fbo = gs.prog = (GLuint)-1;
         gs.tex[0] = gs.tex[1] = (GLuint)-1; gs.vp[2] = -1; gs.valid = 1;
@@ -635,76 +692,171 @@ static void draw_now(rtarget_t *t, const rstate_t *s, int prim, const rvert_t *v
         if (gs.cf != ff) { glFrontFace(ff); gs.cf = ff; }
     } else if (gs.cu != 0) { glDisable(GL_CULL_FACE); gs.cu = 0; }
 
-    /* append to the streaming buffers (orphaned when full) */
-    size_t vb = sizeof(rvert_t) * (size_t)nv, ib = 4 * (size_t)ni;
-    if (g_vbo_off + vb > VBO_BYTES || g_ibo_off + ib > IBO_BYTES) {
-        glBufferData(GL_ARRAY_BUFFER, VBO_BYTES, NULL, GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, IBO_BYTES, NULL, GL_STREAM_DRAW);
-        g_vbo_off = g_ibo_off = 0;
-    }
-    uint32_t base = (uint32_t)(g_vbo_off / sizeof(rvert_t));
-    if (base) for (int i = 0; i < ni; i++) idx[i] += base;
-    glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)g_vbo_off, (GLsizeiptr)vb, v);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)g_ibo_off, (GLsizeiptr)ib, idx);
-    GLenum mode = prim == RPRIM_TRIS ? GL_TRIANGLES : prim == RPRIM_LINES ? GL_LINES : GL_POINTS;
-    glDrawElements(mode, ni, GL_UNSIGNED_INT, (void *)(uintptr_t)g_ibo_off);
-    g_vbo_off += (vb + sizeof(rvert_t) - 1) / sizeof(rvert_t) * sizeof(rvert_t);
-    g_ibo_off += ib;
 }
-/* ---- batching: consecutive draws with identical state become one draw call ---- */
-uint32_t g_rdr_batches, g_rdr_draws;   /* statistics */
-static struct { rtarget_t *t; rstate_t s; int prim; rvert_t *v; int nv, cap_v; uint32_t *idx; int ni, cap_i; } g_b;
+/* ---- batching and deferred submission ----
+ * Consecutive draws with identical state become one batch. Batches are not sent to GL one by one:
+ * their vertices and indices go into one CPU arena and the batches into a queue. At the next point
+ * where GL order matters (a texture upload, a blit, a copy, a read-back, a clear, present...) the
+ * whole arena is uploaded in ONE glBufferSubData for vertices and one for indices, and the queue is
+ * replayed with glDrawElementsBaseVertex. GP3 makes ~600 batches per frame but only a handful of
+ * such points, so the driver sees a few large uploads instead of ~1,200 small ones per frame. */
+uint32_t g_rdr_batches, g_rdr_draws, g_rdr_uploads, g_rdr_copyruns;   /* statistics */
+enum { Q_DRAW, Q_COPY, Q_COPYFROM, Q_BLIT };
+static void blits_upload(void);
+static uint32_t *g_bpx; static size_t g_bpxn, g_bpxcap;     /* blit pixel arena */
+static int g_bh;                                             /* rows used in the staging texture */
+typedef struct { int kind; rtarget_t *t; rstate_t s; int prim; uint32_t v0, nv, i0, ni; int same; uint32_t r0, nr; rtarget_t *src; } qcmd_t;
+typedef struct { int dx, dy, dw, dh, sx, sy, sw, sh; } crect_t;
+static crect_t *g_cr; static uint32_t g_crn, g_crcap;     /* copy rectangles of the queued copies */
+static void copy_run(rtarget_t *t, const crect_t *r, uint32_t n);
+static void blit_now(const qcmd_t *c);
+static void copy_from_now(rtarget_t *t, int dx, int dy, int dw, int dh, rtarget_t *src, int sx, int sy, int sw, int sh);
+static qcmd_t *g_q; static int g_qn, g_qcap;
+static rvert_t *g_av; static uint32_t g_avn, g_avcap;      /* vertex arena */
+static uint32_t *g_ai; static uint32_t g_ain, g_aicap;     /* index arena (relative to each batch) */
+static struct { int open; rtarget_t *t; rstate_t s; int prim; uint32_t v0, i0; } g_b;
+static size_t g_vbo_cap = VBO_BYTES, g_ibo_cap = IBO_BYTES;
+static qcmd_t *q_push(void) {
+    if (g_qn == g_qcap) { g_qcap = g_qcap ? g_qcap * 2 : 1024; g_q = realloc(g_q, sizeof *g_q * g_qcap); }
+    return &g_q[g_qn++];
+}
+static void cr_push(const crect_t *r) {
+    if (g_crn == g_crcap) { g_crcap = g_crcap ? g_crcap * 2 : 1024; g_cr = realloc(g_cr, sizeof *g_cr * g_crcap); }
+    g_cr[g_crn++] = *r;
+}
+static void batch_close(void) {
+    if (!g_b.open) return;
+    g_b.open = 0;
+    if (g_avn == g_b.v0) return;
+    qcmd_t *c = q_push(); c->kind = Q_DRAW;
+    c->t = g_b.t; c->s = g_b.s; c->prim = g_b.prim; c->v0 = g_b.v0; c->nv = g_avn - g_b.v0; c->i0 = g_b.i0; c->ni = g_ain - g_b.i0;
+}
 static void batch_flush(void) {
-    if (!g_b.nv) return;
-    draw_now(g_b.t, &g_b.s, g_b.prim, g_b.v, g_b.nv, g_b.idx, g_b.ni);
-    g_rdr_batches++;
-    g_b.nv = g_b.ni = 0;
+    batch_close();
+    if (!g_qn) { g_avn = g_ain = 0; g_crn = 0; g_bpxn = 0; g_bh = 0; return; }
+    size_t vb = sizeof(rvert_t) * (size_t)g_avn, ib = 4 * (size_t)g_ain, voff = 0;
+    if (g_avn) {
+        if (!gs.valid) { int k = 0; while (g_q[k].kind != Q_DRAW) k++; apply_state(g_q[k].t, &g_q[k].s); }   /* binds the VAO and buffers */
+        if (vb > g_vbo_cap || ib > g_ibo_cap) {             /* more than ever before: bigger buffers */
+            while (vb > g_vbo_cap) g_vbo_cap *= 2;
+            while (ib > g_ibo_cap) g_ibo_cap *= 2;
+            g_vbo_off = g_vbo_cap; g_ibo_off = g_ibo_cap;    /* forces the orphan below at the new size */
+        }
+        voff = (g_vbo_off + sizeof(rvert_t) - 1) / sizeof(rvert_t) * sizeof(rvert_t);
+        if (voff + vb > g_vbo_cap || g_ibo_off + ib > g_ibo_cap) {
+            glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)g_vbo_cap, NULL, GL_STREAM_DRAW);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)g_ibo_cap, NULL, GL_STREAM_DRAW);
+            voff = g_vbo_off = g_ibo_off = 0;
+        }
+        glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)voff, (GLsizeiptr)vb, g_av);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)g_ibo_off, (GLsizeiptr)ib, g_ai);
+        g_rdr_uploads++;
+    }
+    blits_upload();
+    GLint vbase = (GLint)(voff / sizeof(rvert_t));
+    size_t ibase = g_ibo_off;
+    for (int i = 0; i < g_qn; i++) {
+        qcmd_t *c = &g_q[i];
+        if (c->kind == Q_COPY) { copy_run(c->t, g_cr + c->r0, c->nr); g_rdr_copyruns++; continue; }
+        if (c->kind == Q_BLIT) { blit_now(c); continue; }
+        if (c->kind == Q_COPYFROM) { const crect_t *r = g_cr + c->r0; copy_from_now(c->t, r->dx, r->dy, r->dw, r->dh, c->src, r->sx, r->sy, r->sw, r->sh); continue; }
+        apply_state(c->t, &c->s);
+        GLenum mode = c->prim == RPRIM_TRIS ? GL_TRIANGLES : c->prim == RPRIM_LINES ? GL_LINES : GL_POINTS;
+        glDrawElementsBaseVertex(mode, (GLsizei)c->ni, GL_UNSIGNED_INT, (void *)(uintptr_t)(ibase + 4 * (size_t)c->i0), vbase + (GLint)c->v0);
+        g_rdr_batches++;
+    }
+    if (g_avn) { g_vbo_off = voff + vb; g_ibo_off += ib; }
+    g_qn = 0; g_avn = g_ain = 0; g_crn = 0; g_bpxn = 0; g_bh = 0;
 }
-static void g_draw(rtarget_t *t, const rstate_t *s, int prim, const rvert_t *v, int nv, const uint16_t *idx, int ni) {
+static void g_draw_q(rtarget_t *t, const rstate_t *s, int prim, const rvert_t *v, int nv, const uint16_t *idx, int ni) {
     t->gen++;
     g_rdr_draws++;
-#ifdef BATCH_DEBUG
-    if (g_b.nv && memcmp(&g_b.s, s, sizeof *s)) {
-        extern uint32_t g_bd[16];
-        const rstate_t *a = &g_b.s;
-        if (a->st[0].tex != s->st[0].tex) g_bd[0]++;
-        if (a->st[1].tex != s->st[1].tex) g_bd[1]++;
-        if (a->blend != s->blend || a->srcblend != s->srcblend || a->dstblend != s->dstblend) g_bd[2]++;
-        if (a->atest != s->atest || a->aref != s->aref) g_bd[3]++;
-        if (a->nstages != s->nstages || memcmp(&a->st[0].colorop, &s->st[0].colorop, sizeof(int) * 6) || memcmp(&a->st[1].colorop, &s->st[1].colorop, sizeof(int) * 6)) g_bd[4]++;
-        if (a->cull != s->cull) g_bd[5]++;
-        if (a->vx != s->vx || a->vy != s->vy || a->vw != s->vw || a->vh != s->vh) g_bd[6]++;
-        if (a->ckey != s->ckey || a->specular != s->specular || a->fog != s->fog) g_bd[7]++;
-        if (a->tfactor != s->tfactor) g_bd[8]++;
-        if (memcmp(&a->st[0].addru, &s->st[0].addru, sizeof(int) * 5)) g_bd[9]++;
-    } else if (g_b.nv && g_b.prim != prim) { extern uint32_t g_bd[16]; g_bd[10]++; }
-#endif
-    if (g_b.nv && (g_b.t != t || g_b.prim != prim || g_b.nv + nv > (1 << 20) || memcmp(&g_b.s, s, sizeof *s))) batch_flush();
-    if (!g_b.nv) { g_b.t = t; g_b.s = *s; g_b.prim = prim; }
-    if (g_b.nv + nv > g_b.cap_v) { g_b.cap_v = (g_b.nv + nv) * 2 + 1024; g_b.v = realloc(g_b.v, sizeof(rvert_t) * g_b.cap_v); }
-    if (g_b.ni + ni > g_b.cap_i) { g_b.cap_i = (g_b.ni + ni) * 2 + 4096; g_b.idx = realloc(g_b.idx, 4 * (size_t)g_b.cap_i); }
-    memcpy(g_b.v + g_b.nv, v, sizeof(rvert_t) * nv);
-    for (int i = 0; i < ni; i++) g_b.idx[g_b.ni + i] = (uint32_t)idx[i] + (uint32_t)g_b.nv;
-    g_b.nv += nv; g_b.ni += ni;
+    if (g_b.open && (g_b.t != t || g_b.prim != prim || memcmp(&g_b.s, s, sizeof *s))) batch_close();
+    /* keep one upload within the streaming buffers' size */
+    if ((size_t)(g_avn + nv) * sizeof(rvert_t) > VBO_BYTES || (size_t)(g_ain + ni) * 4 > IBO_BYTES) batch_flush();
+    if (!g_b.open) { g_b.open = 1; g_b.t = t; g_b.s = *s; g_b.prim = prim; g_b.v0 = g_avn; g_b.i0 = g_ain; }
+    if (g_avn + nv > g_avcap) { g_avcap = (g_avn + nv) * 2 + 4096; g_av = realloc(g_av, sizeof(rvert_t) * g_avcap); }
+    if (g_ain + ni > g_aicap) { g_aicap = (g_ain + ni) * 2 + 8192; g_ai = realloc(g_ai, 4 * (size_t)g_aicap); }
+    memcpy(g_av + g_avn, v, sizeof(rvert_t) * nv);
+    uint32_t rel = g_avn - g_b.v0, *o = g_ai + g_ain;
+    for (int i = 0; i < ni; i++) o[i] = (uint32_t)idx[i] + rel;
+    g_avn += nv; g_ain += ni;
 }
 
-static void g_blit(rtarget_t *t, int dx, int dy, int dw, int dh, const uint32_t *argb, int sw, int sh, int pitch_px, int keyed) {
-    batch_flush(); gl_state_stale();
+/* CPU-drawn pixels (cars, shadows, text that GP3 draws with the processor) put on a target. They
+ * are queued too: the pixels are kept in a CPU arena and, at the flush, all the blits of the queue
+ * go to the GPU through ONE pixel-buffer upload, each into its own rows of a staging texture. */
+#define BLIT_ROWS 8192
+static void g_blit_q(rtarget_t *t, int dx, int dy, int dw, int dh, const uint32_t *argb, int sw, int sh, int pitch_px, int keyed) {
     t->gen++;
-    upload_staging(argb, pitch_px, sw, sh);
+    if (sw <= 0 || sh <= 0) return;
+    batch_close();
+    /* queued only when copied 1:1 (the overlay of cars and shadows): each pixel then falls in the
+     * middle of a texel, so the result is exactly the same wherever the pixels sit in the staging
+     * texture. A scaled picture (the start lights panel...) goes the direct way, as before. */
+    int direct = dw != sw || dh != sh || sw > 4096 || sh > BLIT_ROWS;
+    if (direct || g_bh + sh > BLIT_ROWS) batch_flush();
+    if (direct) {
+        gl_state_stale();
+        upload_staging(argb, pitch_px, sw, sh);
+        glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+        glViewport(0, 0, t->sw, t->sh);
+        glDisable(GL_SCISSOR_TEST);
+        glUseProgram(g_quad_prog);
+        glUniform4f(g_quad_u_uvrect, 0, 0, (float)sw / g_upload_w, (float)sh / g_upload_h);
+        quad(g_upload_tex, (float)dx * g_scale, (float)dy * g_scale, (float)(dx + dw) * g_scale, (float)(dy + dh) * g_scale, t->sw, t->sh, 0, keyed, 0);
+        glUniform4f(g_quad_u_uvrect, 0, 0, 1, 1);
+        return;
+    }
+    size_t n = (size_t)sw * sh;
+    if (g_bpxn + n > g_bpxcap) { g_bpxcap = (g_bpxn + n) * 2 + 65536; g_bpx = realloc(g_bpx, g_bpxcap * 4); }
+    for (int y = 0; y < sh; y++) memcpy(g_bpx + g_bpxn + (size_t)y * sw, argb + (size_t)y * pitch_px, (size_t)sw * 4);
+    qcmd_t *c = q_push(); c->kind = Q_BLIT; c->t = c->src = t; c->prim = keyed; c->v0 = (uint32_t)g_bpxn; c->i0 = (uint32_t)g_bh;
+    crect_t r = { dx, dy, dw, dh, 0, 0, sw, sh }; c->r0 = g_crn; c->nr = 1; cr_push(&r);
+    g_bpxn += n; g_bh += sh;
+}
+static GLuint g_btex, g_bpbo; static int g_btex_w, g_btex_h;
+/* all the queued blits' pixels to the staging texture: one buffer upload */
+static void blits_upload(void) {
+    if (!g_bpxn) return;
+    gl_state_stale();   /* binds a texture behind the draw state cache */
+    if (!g_btex) { glGenTextures(1, &g_btex); glGenBuffers(1, &g_bpbo); }
+    int w = 0;
+    for (int i = 0; i < g_qn; i++) if (g_q[i].kind == Q_BLIT && g_cr[g_q[i].r0].sw > w) w = g_cr[g_q[i].r0].sw;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_btex);
+    if (w > g_btex_w || g_bh > g_btex_h) {   /* grows to what the game needs (a few hundred rows) */
+        if (w > g_btex_w) g_btex_w = w;
+        while (g_btex_h < g_bh) g_btex_h = g_btex_h ? g_btex_h * 2 : 256;
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, g_btex_w, g_btex_h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    }
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, g_bpbo);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, (GLsizeiptr)(g_bpxn * 4), g_bpx, GL_STREAM_DRAW);
+    for (int i = 0; i < g_qn; i++) {
+        if (g_q[i].kind != Q_BLIT) continue;
+        const crect_t *r = &g_cr[g_q[i].r0];
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, (GLint)g_q[i].i0, r->sw, r->sh, GL_BGRA, GL_UNSIGNED_BYTE, (const void *)(uintptr_t)((size_t)g_q[i].v0 * 4));
+    }
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    g_rdr_uploads++;
+}
+static void blit_now(const qcmd_t *c) {
+    const crect_t *r = &g_cr[c->r0]; rtarget_t *t = c->t;
+    gl_state_stale();
     glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
     glViewport(0, 0, t->sw, t->sh);
     glDisable(GL_SCISSOR_TEST);
     glUseProgram(g_quad_prog);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, (float)sw / g_upload_w, (float)sh / g_upload_h);
-    quad(g_upload_tex, (float)dx * g_scale, (float)dy * g_scale, (float)(dx + dw) * g_scale, (float)(dy + dh) * g_scale, t->sw, t->sh, 0, keyed, 0);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, 1, 1);
+    glUniform4f(g_quad_u_uvrect, 0, (float)c->i0 / g_btex_h, (float)r->sw / g_btex_w, (float)(c->i0 + r->sh) / g_btex_h);
+    quad(g_btex, (float)r->dx * g_scale, (float)r->dy * g_scale, (float)(r->dx + r->dw) * g_scale, (float)(r->dy + r->dh) * g_scale, t->sw, t->sh, 0, c->prim, 0);
+    glUniform4f(g_quad_u_uvrect, 0, 0, 1, 1);
 }
 
 static GLuint g_copy_tex, g_copy_fbo; static int g_copy_w, g_copy_h;
-static void g_copy(rtarget_t *t, int dx, int dy, int dw, int dh, int sx, int sy, int sw, int sh) {
-    batch_flush(); gl_state_stale();
-    t->gen++;
+static void copy_now(rtarget_t *t, int dx, int dy, int dw, int dh, int sx, int sy, int sw, int sh) {
+    gl_state_stale();
     int S = g_scale;
     /* go through a temporary texture: source and destination may overlap */
     if (!g_copy_tex || g_copy_w < sw * S || g_copy_h < sh * S) {
@@ -716,6 +868,7 @@ static void g_copy(rtarget_t *t, int dx, int dy, int dw, int dh, int sx, int sy,
         glBindFramebuffer(GL_FRAMEBUFFER, g_copy_fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_copy_tex, 0);
     }
+    if (sw <= 0 || sh <= 0) return;
     glDisable(GL_SCISSOR_TEST);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, t->fbo);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_copy_fbo);
@@ -726,9 +879,8 @@ static void g_copy(rtarget_t *t, int dx, int dy, int dw, int dh, int sx, int sy,
     glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
 }
 
-static void g_copy_from(rtarget_t *t, int dx, int dy, int dw, int dh, rtarget_t *src, int sx, int sy, int sw, int sh) {
-    batch_flush(); gl_state_stale();
-    t->gen++;
+static void copy_from_now(rtarget_t *t, int dx, int dy, int dw, int dh, rtarget_t *src, int sx, int sy, int sw, int sh) {
+    gl_state_stale();
     int S = g_scale;
     glDisable(GL_SCISSOR_TEST);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, src->fbo);
@@ -736,6 +888,92 @@ static void g_copy_from(rtarget_t *t, int dx, int dy, int dw, int dh, rtarget_t 
     glBlitFramebuffer(sx * S, sy * S, (sx + sw) * S, (sy + sh) * S, dx * S, dy * S, (dx + dw) * S, (dy + dh) * S,
                       GL_COLOR_BUFFER_BIT, (sw == dw && sh == dh) ? GL_NEAREST : GL_LINEAR);
     glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+}
+
+/* GP3 copies pixel rows inside the frame all the time (mirrors, reflections on a wet track): from
+ * ~200 up to ~900 one-row copies per frame, each one two framebuffer blits. Copies are queued like
+ * draws; consecutive same-size copies on one target become a "run": the source area is copied once
+ * into a scratch texture and all the rows are drawn from it in one draw call. A copy that reads
+ * rows written earlier in the same run starts a new run, so the result is the same as copying one
+ * by one. */
+static void g_copy_q(rtarget_t *t, int dx, int dy, int dw, int dh, int sx, int sy, int sw, int sh) {
+    t->gen++;
+    if (dw <= 0 || dh <= 0 || sw <= 0 || sh <= 0) return;
+    batch_close();
+    crect_t r = { dx, dy, dw, dh, sx, sy, sw, sh };
+    int same = dw == sw && dh == sh;
+    qcmd_t *last = g_qn ? &g_q[g_qn - 1] : NULL;
+    if (same && last && last->kind == Q_COPY && last->t == t && last->same) {
+        int hazard = 0;                       /* reads what this run already wrote? */
+        for (uint32_t i = last->r0; i < last->r0 + last->nr; i++) {
+            const crect_t *o = &g_cr[i];
+            if (sx < o->dx + o->dw && o->dx < sx + sw && sy < o->dy + o->dh && o->dy < sy + sh) { hazard = 1; break; }
+        }
+        if (!hazard) { cr_push(&r); last->nr++; return; }
+    }
+    qcmd_t *c = q_push(); c->kind = Q_COPY; c->t = t; c->same = same; c->r0 = g_crn; c->nr = 1; cr_push(&r);
+}
+static void g_copy_from_q(rtarget_t *t, int dx, int dy, int dw, int dh, rtarget_t *src, int sx, int sy, int sw, int sh) {
+    t->gen++;
+    batch_close();
+    qcmd_t *c = q_push(); c->kind = Q_COPYFROM; c->t = t; c->src = src; c->r0 = g_crn; c->nr = 1;
+    crect_t r = { dx, dy, dw, dh, sx, sy, sw, sh }; cr_push(&r);
+}
+/* [advanced] batching=0: every drawing goes to the GPU at once, as in GP3RT 1.0.3 */
+int g_gl_batching = 1;
+static void g_draw(rtarget_t *t, const rstate_t *s, int prim, const rvert_t *v, int nv, const uint16_t *idx, int ni) { g_draw_q(t, s, prim, v, nv, idx, ni); if (!g_gl_batching) batch_flush(); }
+static void g_blit(rtarget_t *t, int dx, int dy, int dw, int dh, const uint32_t *argb, int sw, int sh, int pitch_px, int keyed) { g_blit_q(t, dx, dy, dw, dh, argb, sw, sh, pitch_px, keyed); if (!g_gl_batching) batch_flush(); }
+static void g_copy(rtarget_t *t, int dx, int dy, int dw, int dh, int sx, int sy, int sw, int sh) { g_copy_q(t, dx, dy, dw, dh, sx, sy, sw, sh); if (!g_gl_batching) batch_flush(); }
+static void g_copy_from(rtarget_t *t, int dx, int dy, int dw, int dh, rtarget_t *src, int sx, int sy, int sw, int sh) { g_copy_from_q(t, dx, dy, dw, dh, src, sx, sy, sw, sh); if (!g_gl_batching) batch_flush(); }
+static GLuint g_cprog, g_cvao, g_cvbo; static GLint g_cprog_tex;
+static float *g_cv; static size_t g_cvcap;
+static void copy_run(rtarget_t *t, const crect_t *r, uint32_t n) {
+    if (n == 1) { copy_now(t, r->dx, r->dy, r->dw, r->dh, r->sx, r->sy, r->sw, r->sh); return; }
+    int S = g_scale, bx0 = r->sx, by0 = r->sy, bx1 = r->sx + r->sw, by1 = r->sy + r->sh;
+    for (uint32_t i = 1; i < n; i++) {
+        if (r[i].sx < bx0) bx0 = r[i].sx; if (r[i].sy < by0) by0 = r[i].sy;
+        if (r[i].sx + r[i].sw > bx1) bx1 = r[i].sx + r[i].sw; if (r[i].sy + r[i].sh > by1) by1 = r[i].sy + r[i].sh;
+    }
+    int bw = bx1 - bx0, bh = by1 - by0;
+    /* 1. the source area, once, into the scratch texture */
+    copy_now(t, 0, 0, 0, 0, 0, 0, 0, 0);   /* (only makes sure the scratch texture exists) */
+    if (g_copy_w < bw * S || g_copy_h < bh * S) {
+        g_copy_w = bw * S > g_copy_w ? bw * S : g_copy_w; g_copy_h = bh * S > g_copy_h ? bh * S : g_copy_h;
+        glBindTexture(GL_TEXTURE_2D, g_copy_tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, g_copy_w, g_copy_h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+    }
+    glDisable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, t->fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g_copy_fbo);
+    glBlitFramebuffer(bx0 * S, by0 * S, bx1 * S, by1 * S, 0, 0, bw * S, bh * S, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    /* 2. every row from it, one draw call */
+    if (!g_cprog) {
+        static const char *vs = "#version 330 core\nlayout(location=0) in vec4 a;\nout vec2 uv;\nvoid main(){ gl_Position = vec4(a.xy, 0.0, 1.0); uv = a.zw; }\n";
+        static const char *fs = "#version 330 core\nin vec2 uv; uniform sampler2D u_tex; out vec4 o;\nvoid main(){ o = texelFetch(u_tex, ivec2(uv), 0); }\n";
+        g_cprog = link_prog(vs, fs); g_cprog_tex = glGetUniformLocation(g_cprog, "u_tex");
+        glGenVertexArrays(1, &g_cvao); glGenBuffers(1, &g_cvbo);
+        glBindVertexArray(g_cvao); glBindBuffer(GL_ARRAY_BUFFER, g_cvbo);
+        glVertexAttribPointer(0, 4, GL_FLOAT, 0, 16, (void *)0); glEnableVertexAttribArray(0);
+    }
+    size_t need = (size_t)n * 6 * 4;
+    if (need > g_cvcap) { g_cvcap = need * 2; g_cv = realloc(g_cv, g_cvcap * sizeof(float)); }
+    float *o = g_cv, fx = 2.f / t->sw, fy = 2.f / t->sh;
+    for (uint32_t i = 0; i < n; i++) {
+        /* destination in clip space; source in scratch texels (texelFetch: integer, exact) */
+        float x0 = r[i].dx * S * fx - 1, x1 = (r[i].dx + r[i].dw) * S * fx - 1, y0 = r[i].dy * S * fy - 1, y1 = (r[i].dy + r[i].dh) * S * fy - 1;
+        float u0 = (float)((r[i].sx - bx0) * S), u1 = u0 + r[i].sw * S, v0 = (float)((r[i].sy - by0) * S), v1 = v0 + r[i].sh * S;
+        float q[6][4] = { { x0, y0, u0, v0 }, { x1, y0, u1, v0 }, { x0, y1, u0, v1 }, { x1, y0, u1, v0 }, { x1, y1, u1, v1 }, { x0, y1, u0, v1 } };
+        memcpy(o, q, sizeof q); o += 24;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+    glViewport(0, 0, t->sw, t->sh);
+    glDisable(GL_DEPTH_TEST); glDepthMask(0); glDisable(GL_BLEND); glDisable(GL_CULL_FACE); glDisable(GL_POLYGON_OFFSET_FILL);
+    glUseProgram(g_cprog); glUniform1i(g_cprog_tex, 0);
+    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, g_copy_tex);
+    glBindVertexArray(g_cvao); glBindBuffer(GL_ARRAY_BUFFER, g_cvbo);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(need * sizeof(float)), g_cv, GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)(n * 6));
+    gl_state_stale();
 }
 
 /* the window's back buffer, top row first (screenshots) */
@@ -765,10 +1003,10 @@ static void present_tex(GLuint tex, int w, int h, float u1, float v1) {
     if (wa > sa) vw = (int)(wh * sa + 0.5); else vh = (int)(ww / sa + 0.5);
     int vx = (ww - vw) / 2, vy = (wh - vh) / 2;
     glUseProgram(g_quad_prog);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, u1, v1);
+    glUniform4f(g_quad_u_uvrect, 0, 0, u1, v1);
     /* target textures are stored top-first: flip v when drawing to the window */
     quad(tex, (float)vx, (float)vy, (float)(vx + vw), (float)(vy + vh), ww, wh, 1, 0, 1);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, 1, 1);
+    glUniform4f(g_quad_u_uvrect, 0, 0, 1, 1);
     g_host.swap(g_host.ctx);
 }
 static void g_present(rtarget_t *t, int w, int h) { (void)w; (void)h; batch_flush(); gl_state_stale(); present_tex(t->color, t->w, t->h, 1, 1); }
@@ -788,8 +1026,11 @@ rbackend_t *rdr_gl_init(const rdr_gl_host_t *host, const rdr_gl_options_t *opt) 
 #define F(ret, name, args) name = (ret (GLAPI *) args)host->getproc(#name); if (!name) { glog("GL: missing %s", #name); return NULL; }
     GLFUNCS
 #undef F
+    { const char *e = getenv("GP3_TEX_PBO"); if (e) g_tex_pbo = atoi(e) != 0; }
+    { const char *e = getenv("GP3_BATCHING"); if (e) g_gl_batching = atoi(e) != 0; }
     if (opt) { g_scale = opt->scale > 0 ? opt->scale : 1; g_aniso = opt->anisotropy; g_force_filter = opt->force_linear; g_gen_mips = opt->generate_mipmaps; }
     glog("GL: %s / %s / %s (internal scale %dx, aniso %d)", glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), g_scale, g_aniso);
+    if (!g_gl_batching) glog("GL: batching off (each drawing sent at once, as in 1.0.3)");
     GLint ma = 0; glGetIntegerv(0x84FF /*MAX_TEXTURE_MAX_ANISOTROPY*/, &ma); g_max_aniso = ma > 0 ? (float)ma : 1.f; glGetError();
     glGenVertexArrays(1, &g_qvao);
     glGenVertexArrays(1, &g_vao); glBindVertexArray(g_vao);
@@ -823,9 +1064,10 @@ rbackend_t *rdr_gl_init(const rdr_gl_host_t *host, const rdr_gl_options_t *opt) 
     g_quad_u_rect = glGetUniformLocation(g_quad_prog, "u_rect");
     g_quad_u_flipv = glGetUniformLocation(g_quad_prog, "u_flipv");
     g_quad_u_keyed = glGetUniformLocation(g_quad_prog, "u_keyed");
+    g_quad_u_uvrect = glGetUniformLocation(g_quad_prog, "u_uvrect");
     glUseProgram(g_quad_prog);
     glUniform1i(g_quad_u_tex, 0);
-    glUniform4f(glGetUniformLocation(g_quad_prog, "u_uvrect"), 0, 0, 1, 1);
+    glUniform4f(g_quad_u_uvrect, 0, 0, 1, 1);
     GLenum e = glGetError();
     if (e) glog("GL: init error %x", e);
     return &g_gl;

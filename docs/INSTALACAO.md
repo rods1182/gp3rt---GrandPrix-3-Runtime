@@ -15,16 +15,14 @@ A DLL não resolve sozinha a incompatibilidade do executável protegido por Safe
 2. Mova os wrappers gráficos anteriores que você adicionou para uma pasta de backup fora da pasta do jogo. Uma única `ddraw.dll` pode ocupar esse nome. Preserve componentes originais como `eax.dll` do GP3 2000.
 3. Copie `ddraw.dll` e `gp3rt.ini` para a mesma pasta do executável que você realmente utiliza.
 4. Em Propriedades → Compatibilidade, remova as configurações de compatibilidade do jogo e do GPxPatch. Não habilite privilégios de administrador como requisito padrão.
-5. Se usa GPxPatch, configure CPU para todos os núcleos (**All**, **full** ou equivalente na interface). Comece com Debug desligado.
+5. Se usa GPxPatch, configure CPU para todos os núcleos (**All**, **full** ou equivalente na interface). Deixe o Debug **ligado** (necessário com o GP3RT).
 6. Inicie o jogo, use o modo acelerado e teste primeiro uma pista conhecida. Se a calibração marcar falha, feche o jogo, faça backup de `gconfig.txt`, remova-o e calibre novamente.
 7. Para widescreen, escolha 1280×1024 no menu. Com `wide_width=-1` e `wide_height=-1`, essa entrada é substituída pela resolução do desktop. Com `hor_plus=1`, a implementação corrige o FOV nas builds reconhecidas.
 8. Abra `gp3rt.log` para conferir versão, GPU e reconhecimento do executável.
 
-## GPxPatch Debug na versão 1.0.1
+## GPxPatch Debug
 
-O LEIAME original contém uma orientação antiga para desligar Debug sempre, mas o histórico 1.0.1 e o código adicionam `str_guard=1` para o problema de leitura de strings do GP3 1.13 sob Debug.
-
-Use Debug desligado como teste inicial. Quando uma pista exigir Debug, habilite-o mantendo `[game] str_guard=1` e verifique o resultado. Essa correção é específica do GP3 1.13 e exige assinatura de código reconhecida; não é uma correção geral de todos os travamentos. GP3 2000 não recebe esse patch de strings.
+Com o GP3RT, o Debug do GPxPatch deve ficar **ligado**: desligado, o jogo pode fechar logo ao apertar "Pilotar"/"Drive". (Versões antigas do LEIAME diziam o contrário.) No GP3 1.13, mantenha `[game] str_guard=1`, que corrige a leitura dos textos sob Debug. Essa correção é específica do GP3 1.13 e exige assinatura de código reconhecida; não é uma correção geral de todos os travamentos. GP3 2000 não recebe esse patch de strings.
 
 `[advanced] exception_free=-1` escolhe automaticamente um caminho sem certos truques de exceção quando há depurador. `keep_cpu_affinity=0` permite restaurar todos os núcleos, mesmo se o GPxPatch restringir a afinidade.
 

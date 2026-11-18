@@ -87,6 +87,7 @@ static void cfg_load(void) {
     g_wcfg.multiplayer = (int)GetPrivateProfileIntA("game", "directplay", 0, ini);
     g_wcfg.lazy_readback = (int)GetPrivateProfileIntA("advanced", "lazy_readback", 1, ini);
     { extern int g_overlay_locks; g_overlay_locks = (int)GetPrivateProfileIntA("advanced", "overlay_locks", 1, ini); }
+    { extern int g_gl_batching; g_gl_batching = (int)GetPrivateProfileIntA("advanced", "batching", 1, ini); }
     { extern int g_spray_opacity; int v = (int)GetPrivateProfileIntA("video", "spray_opacity", 100, ini);
       g_spray_opacity = v < 0 ? 0 : v > 100 ? 100 : v;
       extern int g_nofault; DLLIMP BOOL WINAPI IsDebuggerPresent(void);
@@ -418,6 +419,7 @@ static void install_hooks(void) {
       }
     if (GetPrivateProfileIntA("game", "str_guard", 1, g_ini_path)) gp3_fix_string_table();
     if (GetPrivateProfileIntA("game", "edge_fix", 1, g_ini_path)) gp3_raise_edge_limit();
+    if (GetPrivateProfileIntA("game", "sound_lock_fix", 1, g_ini_path)) gp3_fix_sound_lock();
     o_ExitProcess = iat_hook(exe, "kernel32.dll", "ExitProcess", (void *)h_ExitProcess);
     if (!o_ExitProcess) LOG("note: ExitProcess hook not installed");
     o_CreateThread = iat_hook(exe, "kernel32.dll", "CreateThread", (void *)h_CreateThread);

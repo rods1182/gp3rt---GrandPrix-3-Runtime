@@ -343,9 +343,9 @@ static int clip_near(const rvert_t *in, rvert_t *out) {
     return n;
 }
 
+volatile int g_null_draw;   /* testing: skip rasterising (GP3_NULL_DRAW, or the headless control channel) */
 static void s_draw(rtarget_t *t, const rstate_t *s, int prim, const rvert_t *v, int nv, const uint16_t *idx, int ni) {
-    { static int nd = -1; if (nd < 0) { extern char *getenv(const char *); nd = getenv("GP3_NULL_DRAW") != 0; } if (nd) return; }   /* testing: measure the game without rasterising */
-    { static int nul = -1; if (nul < 0) nul = getenv("GP3_NULL_DRAW") != NULL; if (nul) return; }
+    { static int init; if (!init) { init = 1; if (getenv("GP3_NULL_DRAW")) g_null_draw = 1; } if (g_null_draw) return; }   /* testing: measure the game without rasterising */
     (void)nv;
     if (prim == RPRIM_TRIS) {
         for (int i = 0; i + 2 < ni; i += 3) {

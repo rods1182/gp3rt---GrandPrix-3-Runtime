@@ -1,22 +1,24 @@
-# Windows user guide — GP3RT 1.0.3
+# Windows user guide — GP3RT 1.1.0
 
 ## Requirements and installation
 
 Use your own GP3 1.13 or GP3 2000 installation, Windows 10/11 with x86 process support, and an OpenGL 3.3 driver. The supplied DLL is a 32-bit PE binary. The runtime does not by itself solve the original SafeDisc-protected executable issue described in the original package. No replacement game executable is distributed.
 
-Back up the game folder. Move aside graphics wrappers you previously installed, preserving original game libraries such as GP3 2000's eax.dll. Place ddraw.dll and gp3rt.ini next to the executable you actually launch. Never put the DLL in Windows/System32. Disable compatibility modes on the game and GPxPatch. Start with all CPU cores and Debug disabled.
+Back up the game folder. Move aside graphics wrappers you previously installed, preserving original game libraries such as GP3 2000's eax.dll. Place ddraw.dll and gp3rt.ini next to the executable you actually launch. Never put the DLL in Windows/System32. Disable compatibility modes on the game and GPxPatch. Use all CPU cores and keep GPxPatch Debug enabled.
 
 Use hardware graphics; select 1280×1024 for widescreen. With wide_width=-1 and wide_height=-1, that entry maps to desktop resolution. hor_plus=1 corrects FOV on recognized builds. Check game build and GPU in gp3rt.log. If calibration fails, close the game, back up gconfig.txt, remove it and retry.
 
 ## GPxPatch Debug
 
-Version 1.0.1 adds str_guard=1 for a GP3 1.13 string-table overread observed with GPxPatch Debug. For tracks requiring Debug, enable it with the guard active and check the result. It is not a universal crash fix and is not applied to GP3 2000. This supersedes the original blanket instruction to always disable Debug.
+Version 1.0.1 adds str_guard=1 for a GP3 1.13 string-table overread observed with GPxPatch Debug. For tracks requiring Debug, enable it with the guard active and check the result. It is not a universal crash fix and is not applied to GP3 2000. With GP3RT, GPxPatch Debug must be enabled: with it off, the game can close when you press "Drive". This supersedes the earlier instruction to disable Debug.
 
 Version 1.0.3 adds edge_fix=1 (on by default): GP3's per-frame geometry limit goes from 2,999 to 16,000 edges, fixing missing car bodies, grey polygons and crashes on very detailed tracks with the TV camera pulled back. Applies to GP3 1.13 and GP3 2000.
 
+Version 1.1.0 adds sound_lock_fix=1 (on by default, GP3 2000 only): GP3 2000's 3D sound guards its list of sounds with a lock that does not really lock; on multi-core processors a sound could be freed while still in use and the game closed after 20-40 minutes (gp3_2000.exe+0x13d49b). The lock is fixed in memory.
+
 ## Configuration
 
-The optional HTML configurator opens and saves the INI. If the browser downloads a new INI, replace the one in the game folder manually. Restart the game after edits.
+The optional HTML configurator opens the game folder and reads gp3rt.ini and the last gp3rt.log by itself. Chrome and Edge save straight into the folder; other browsers download the INI for you to copy. Restart the game after edits.
 
 Common options: renderer=opengl (or software fallback), mode=fullscreen/window, internal_scale=auto or 1–4, gpu=auto/dedicated/integrated/system, aspect=keep/stretch, spray_opacity=60, vsync=1. See the commented INI and Portuguese configuration reference for all distributed values.
 

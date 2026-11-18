@@ -1,4 +1,4 @@
-# Referência do gp3rt.ini — 1.0.3
+# Referência do gp3rt.ini — 1.1.0
 
 Valores abaixo copiados do INI fornecido. São os valores **distribuídos**, não uma auditoria de todos os padrões internos quando uma chave é omitida. Feche o jogo antes de editar.
 
@@ -30,6 +30,7 @@ Valores abaixo copiados do INI fornecido. São os valores **distribuídos**, nã
 | `directplay` | `0` | 0 desativa o caminho DirectPlay na abertura; 1 permite tentativa de rede, sem garantir multiplayer. |
 | `str_guard` | `1` | 1 habilita proteção da tabela de strings no GP3 1.13 reconhecido. |
 | `edge_fix` | `1` | 1 amplia o limite de geometria por quadro do jogo (2.999 → 16.000 bordas, área de trabalho 100 KB → 2 MB) e impede o fechamento quando esse limite estoura. GP3 1.13 e GP3 2000. |
+| `sound_lock_fix` | `1` | GP3 2000: corrige na memória a "trava" do som 3D que deixava o jogo fechar em corridas longas (gp3_2000.exe+0x13d49b) em processadores de vários núcleos. |
 
 ## [advanced]
 

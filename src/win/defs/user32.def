@@ -34,5 +34,8 @@ RegisterClassA@4
 CreateWindowExA@48
 MoveWindow@24
 IsIconic@4
+GetAncestor@8
+IsWindowVisible@4
+GetWindow@8
 SetCursor@4
 LoadCursorA@8
