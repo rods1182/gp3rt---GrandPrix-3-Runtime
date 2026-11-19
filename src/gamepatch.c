@@ -252,3 +252,42 @@ void gp3_fix_sound_lock(void) {
     uint8_t c[6]; c[0] = 0xe8; rel = (int32_t)((uintptr_t)snd_mix_stub - (uintptr_t)(mx + 5)); memcpy(c + 1, &rel, 4); c[5] = 0x90;
     if (plat_patch_code(lk, j, 5) == 0 && plat_patch_code(mx, c, 6) == 0) LOG("sound lock fix: on (GP3 2000 crash at +0x13d49b in long races)");
 }
+
+/* GP3 1.13: spray and smoke missing in the replay after rewinding (also with Gp3Video).
+   13 effect generators (0x560d94, stride 0xe0) keep "next allowed time" at +0x6c; every tick
+   0x47caef only raises it to the race clock (0xb93fc4), never lowers it. Rewinding the replay
+   moves the clock back, the generators stay at the furthest time already reached and nothing is
+   emitted until the replay gets there again. The stub brings them back to the clock first. */
+__attribute__((used)) uint32_t g_fx_next __asm__("gp3_fx_next") = 0x47caef;
+__attribute__((naked)) static void fx_clamp_stub(void) {
+    __asm__ volatile(
+        "push %eax\n push %ebx\n push %ecx\n"
+        "mov 0xb93fc4, %eax\n mov $0x560d94, %ebx\n mov $13, %ecx\n"
+        "1: cmp %eax, 0x6c(%ebx)\n jle 2f\n mov %eax, 0x6c(%ebx)\n"
+        "2: add $0xe0, %ebx\n dec %ecx\n jnz 1b\n"
+        "pop %ecx\n pop %ebx\n pop %eax\n jmp *gp3_fx_next\n");
+}
+void gp3_fix_replay_effects(void) {
+    const gp3_addrs_t *A = gp3_addrs();
+    if (!A || A->fov_site != 0x4082fb) return;                    /* GP3 1.13 only */
+    static const uint8_t want_call[] = { 0xe8, 0xb8, 0x00, 0x00, 0x00 };
+    static const uint8_t want_fn[] = { 0xb9, 0x0d, 0x00, 0x00, 0x00, 0xbb, 0x94, 0x0d, 0x56, 0x00, 0x8b, 0x43, 0x6c, 0x3b, 0x05, 0xc4, 0x3f, 0xb9, 0x00 };
+    uint8_t *site = (uint8_t *)(uintptr_t)0x47ca32;
+    if (memcmp(site, want_call, 5) || memcmp((void *)(uintptr_t)0x47caef, want_fn, sizeof want_fn)) { LOG("replay effects fix: code differs, not applied"); return; }
+    uint8_t c[5]; c[0] = 0xe8; int32_t rel = (int32_t)((uintptr_t)fx_clamp_stub - (uintptr_t)(site + 5)); memcpy(c + 1, &rel, 4);
+    if (plat_patch_code(site, c, 5) == 0) LOG("replay effects fix: on (spray and smoke after rewinding the replay)");
+}
+
+/* GP3 2000: the replay length option goes up to 2 hours (GP3 2000 stops at 90 minutes).
+   The menu's maximum (0x7ea118) is 5400 s on any PC with more than 128 MB; the replay keeps
+   one snapshot every 3 s in a buffer the game sizes from the chosen length, so 7200 s only
+   means a bigger buffer (about 120 MB instead of 90 MB). */
+void gp3_replay_2h(void) {
+    const gp3_addrs_t *A = gp3_addrs();
+    if (!A || A->fov_site != 0x490944) return;                  /* GP3 2000 only */
+    static const uint8_t want[] = { 0x66, 0xc7, 0x05, 0x18, 0xa1, 0x7e, 0x00, 0x18, 0x15 };
+    uint8_t *site = (uint8_t *)(uintptr_t)0x49b5ca;
+    if (memcmp(site, want, sizeof want)) { LOG("replay 2h: code differs, not applied"); return; }
+    static const uint8_t v[2] = { 0x20, 0x1c };                   /* 7200 */
+    if (plat_patch_code(site + 7, v, 2) == 0) LOG("replay 2h: on (replay length option up to 2 hours)");
+}

@@ -2,6 +2,16 @@
 
 Resumo do histórico distribuído com o pacote; sem datas de lançamento confirmadas e sem criar mudanças fictícias.
 
+## 1.2.0
+
+- **GP3Replay.dll** (GP3 1.13): replay da corrida inteira (mais de 2 horas) sem um executável à parte. Substitui o GP3 Video (gp3v.exe): a mesma ampliação do buffer de replay é feita na memória quando o jogo abre, com relocação do código; o Gp3.exe não é alterado e a mesma DLL serve ao Windows e ao Linux. Se o executável já tiver o replay ampliado ou não for o GP3 1.13, nada é alterado (`gp3replay`, padrão 1). Inspirado no Gp3Video, do Rafa.
+- Teclas do replay do GP3 2000 no GP3 1.13, com legenda na tela (`replay_keys`, `replay_legend`): F1/F2 voltas, F3 ou P play/pausa, F4 câmera lenta, F5/F8 voltar/avançar, F6/F7 quadro a quadro, F9 legenda. Durante a corrida a DLL guarda uma foto compactada por segundo (quadro-chave a cada 30, diferenças entre eles; ~10 KB por segundo); voltar e avançar restauram essas fotos e o replay continua idêntico à corrida (verificado tick a tick). P e depois R abre o replay já tocando, a partir do início da volta. Pausa, câmera lenta e quadro a quadro sem tremer nem piscar (quadros repetidos não giram os buffers).
+- GP3 1.13: o spray da chuva e a fumaça sumiam no replay depois de voltar, porque os geradores de efeito guardam o horário do próximo efeito e ele só anda para a frente. A DLL limita esse horário ao relógio do replay (`replay_fx_fix`, padrão 1).
+- GP3 2000: replay de até 2 horas; o limite do controle "Length of replay" passa de 1h30 para 2h00 (`replay_2h`, padrão 1).
+- Teclas no Windows lidas também pelo estado do teclado (o jogo usa DirectInput e algumas mensagens se perdiam), só com o jogo em primeiro plano.
+- Configurador: nova seção Replay.
+- Agradecimentos: Rafa, criador do Gp3Video, pela inspiração.
+
 ## 1.1.0
 
 - Desenho bem mais leve para o processador: o desenho de cada quadro é juntado e enviado à placa de vídeo de uma vez, assim como as imagens que o jogo copia para a tela. Num notebook com RTX 3050, em Spa com chuva, o tempo da DLL caiu de cerca de 760 ms para cerca de 80 ms por segundo de jogo.

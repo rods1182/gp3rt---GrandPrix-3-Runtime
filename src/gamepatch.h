@@ -15,6 +15,8 @@ void gp3_addrs_reset(void);       /* NULL = unknown build */
 void gp3_widen_modes(int w, int h);   /* menu 1280x1024 entries -> w x h */
 void gp3_hor_plus(int fov_percent);
 void gp3_fix_sound_lock(void);     /* GP3 2000: sound threads race (crash at +0x13d49b) */
+void gp3_fix_replay_effects(void); /* GP3 1.13: spray/smoke missing after rewinding the replay */
+void gp3_replay_2h(void);         /* GP3 2000: replay length option up to 2 hours */
 uint32_t gp3_snd_lock_waits(void);
 void gp3_fix_string_table(void);   /* GP3 1.13: short ldata\\*.str files */   /* Hor+ field of view for wide screens */
 void gp3_raise_edge_limit(void);   /* 3D edge table 2999 -> 16000, crash fix */

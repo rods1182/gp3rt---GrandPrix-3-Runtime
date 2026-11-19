@@ -1,4 +1,4 @@
-# Windows user guide — GP3RT 1.1.0
+# Windows user guide — GP3RT 1.2.0
 
 ## Requirements and installation
 
@@ -15,6 +15,12 @@ Version 1.0.1 adds str_guard=1 for a GP3 1.13 string-table overread observed wit
 Version 1.0.3 adds edge_fix=1 (on by default): GP3's per-frame geometry limit goes from 2,999 to 16,000 edges, fixing missing car bodies, grey polygons and crashes on very detailed tracks with the TV camera pulled back. Applies to GP3 1.13 and GP3 2000.
 
 Version 1.1.0 adds sound_lock_fix=1 (on by default, GP3 2000 only): GP3 2000's 3D sound guards its list of sounds with a lock that does not really lock; on multi-core processors a sound could be freed while still in use and the game closed after 20-40 minutes (gp3_2000.exe+0x13d49b). The lock is fixed in memory.
+
+## Replay (1.2.0)
+
+On GP3 1.13, copy the optional GP3Replay.dll next to ddraw.dll: the replay then keeps the whole race (over 2 hours), with no separate executable. It replaces GP3 Video's gp3v.exe (start the game directly) and was inspired by Rafa's Gp3Video. Gp3.exe is not modified on disk.
+
+GP3 2000-style replay keys on GP3 1.13 (replay_keys=1, legend with replay_legend=1): F1/F2 previous/next lap, F3 or P play/pause, F4 slow motion, F5/F8 rewind/fast forward while held, F6/F7 one frame back/forward, F9 show/hide the legend. In the race, P pauses and R opens the replay already playing from the start of the lap; the replay ends where you paused, and P resumes the race. replay_fx_fix=1 keeps rain spray and smoke after rewinding. On GP3 2000, replay_2h=1 lets "Length of replay" go up to 2 hours.
 
 ## Configuration
 

@@ -876,6 +876,9 @@ int d3d_present_hook(ddsurf_t *front) {
             free(tmp);
             return 1;
         }
+        { extern const uint32_t *replayctl_legend(int *w, int *h, int *scale); int lw, lh, ls;
+          const uint32_t *L = replayctl_legend(&lw, &lh, &ls);
+          if (L) { int dw = lw / ls, dh = lh / ls; RDR->blit(x->tgt, (front->w - dw) / 2, front->h - dh - 6, dw, dh, L, lw, lh, lw, 1); } }
         uint64_t tp = rt_now_us();
         RDR->present(x->tgt, front->w, front->h);
         g_t_present += rt_now_us() - tp;
@@ -1239,6 +1242,7 @@ static uint64_t g_draws, g_tris;
 int g_spray_opacity = 100;     /* percent, gp3rt.ini [video] spray_opacity */
 int g_spray_near_fade = 1;     /* gp3rt.ini [video] spray_near_fade */
 static uint32_t g_spray_draws;
+volatile uint32_t g_alpha_draws, g_alpha_verts, g_puff_draws;   /* testing: SRCALPHA/INVSRCALPHA draws (smoke, spray) */
 static void do_draw(d3ddev_t *d, int type, DWORD fvf, const void *verts, int stride, int nv, const uint16_t *idx, int ni) {
     if (!d->rt || nv <= 0) return;
     int count = idx ? ni : nv;
@@ -1254,6 +1258,29 @@ static void do_draw(d3ddev_t *d, int type, DWORD fvf, const void *verts, int str
     rvert_t *rv = grow(&g_rv_buf, &g_rv_cap, sizeof(rvert_t) * nv);
     decode_verts(d, fvf, verts, stride, nv, rv);
     uint64_t tf4 = rt_now_us(); g_t_prep += tf4 - tf3;
+#ifndef GP3_WIN
+    {   /* testing (GP3_SPRAYTRACE): count puff draws and note which game code issued them */
+        static int on = -1; if (on < 0) on = getenv("GP3_SPRAYTRACE") != NULL;
+        if (on && st.blend) { static uint32_t combos[64]; static int nc; uint32_t key = st.srcblend | st.dstblend << 4 | st.nstages << 8 | (d->tex[0] ? (d->tex[0]->w << 12 | d->tex[0]->h << 22) : 0);
+            int k; for (k = 0; k < nc; k++) if (combos[k] == key) break;
+            if (k == nc && nc < 64) { combos[nc++] = key; LOG("spraytrace: blend combo src %d dst %d stages %d tex %dx%d", st.srcblend, st.dstblend, st.nstages, d->tex[0] ? d->tex[0]->w : 0, d->tex[0] ? d->tex[0]->h : 0); } }
+        if (on && st.blend && st.srcblend == 5 && st.dstblend == 6) {
+            static uint32_t n, seen[32]; static int ns; static uint64_t t0;
+            n++;
+            uint32_t *sp = (uint32_t *)__builtin_frame_address(0);
+            if (d->tex[0] && d->tex[0]->w == 64 && d->tex[0]->h == 64) {
+                uint32_t ch[8]; int nch = 0;
+                for (int i = 0; i < 2048 && nch < 8; i++) { uint32_t v = sp[i]; if (v > 0x401000 && v < 0x52b000) ch[nch++] = v; }
+                uint32_t key = 0; for (int i = 0; i < nch; i++) key = key * 31 + ch[i];
+                int k; for (k = 0; k < ns; k++) if (seen[k] == key) break;
+                if (k == ns && ns < 32) { seen[ns++] = key;
+                    LOG("spraytrace: puff64 chain %08x %08x %08x %08x %08x %08x %08x %08x nv %d", ch[0], nch > 1 ? ch[1] : 0, nch > 2 ? ch[2] : 0, nch > 3 ? ch[3] : 0, nch > 4 ? ch[4] : 0, nch > 5 ? ch[5] : 0, nch > 6 ? ch[6] : 0, nch > 7 ? ch[7] : 0, nv); }
+            }
+            uint64_t now = rt_now_us(); if (now - t0 > 1000000) { LOG("spraytrace: %u puffs/s", n); n = 0; t0 = now; }
+        }
+    }
+#endif
+    if (st.blend && st.srcblend == 5 && st.dstblend == 6) { g_alpha_draws++; g_alpha_verts += nv; if (d->tex[0] && d->tex[0]->w == 64 && d->tex[0]->h == 64) g_puff_draws++; }
     /* spray / smoke clouds: 64x64 alpha puffs blended SRCALPHA/INVSRCALPHA with texture*diffuse alpha.
      * Near trackside TV cameras a dozen of them pile up into a grey wall; optional thinning. */
     if ((g_spray_opacity < 100 || g_spray_near_fade) && st.blend && st.srcblend == 5 && st.dstblend == 6 && st.nstages == 1 &&

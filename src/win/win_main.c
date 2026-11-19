@@ -420,6 +420,21 @@ static void install_hooks(void) {
     if (GetPrivateProfileIntA("game", "str_guard", 1, g_ini_path)) gp3_fix_string_table();
     if (GetPrivateProfileIntA("game", "edge_fix", 1, g_ini_path)) gp3_raise_edge_limit();
     if (GetPrivateProfileIntA("game", "sound_lock_fix", 1, g_ini_path)) gp3_fix_sound_lock();
+    if (GetPrivateProfileIntA("game", "replay_fx_fix", 1, g_ini_path)) gp3_fix_replay_effects();
+    if (GetPrivateProfileIntA("game", "replay_2h", 1, g_ini_path)) gp3_replay_2h();
+    { extern void gp3_replay_keys(int legend); if (GetPrivateProfileIntA("game", "replay_keys", 1, g_ini_path)) gp3_replay_keys(GetPrivateProfileIntA("game", "replay_legend", 1, g_ini_path)); }
+    /* GP3Replay.dll (replay of the whole race, GP3 1.13): an optional add-on, loaded when it is in the game folder */
+    if (GetPrivateProfileIntA("game", "gp3replay", 1, g_ini_path)) {
+        char vp[1100]; gp3_snprintf(vp, sizeof vp, "%s\\GP3Replay.dll", g_game_dir);
+        if (GetFileAttributesA(vp) != (DWORD)-1) {
+            HMODULE vm = LoadLibraryA(vp);
+            typedef int (WINAPI *gvst_t)(char *, int);
+            gvst_t st = vm ? (gvst_t)GetProcAddress(vm, "GP3Replay_Status") : 0;
+            char msg[256] = "";
+            if (st) st(msg, sizeof msg);
+            LOG("%s", vm ? (st ? msg : "GP3Replay.dll loaded (no status)") : "GP3Replay.dll found but could not be loaded");
+        }
+    }
     o_ExitProcess = iat_hook(exe, "kernel32.dll", "ExitProcess", (void *)h_ExitProcess);
     if (!o_ExitProcess) LOG("note: ExitProcess hook not installed");
     o_CreateThread = iat_hook(exe, "kernel32.dll", "CreateThread", (void *)h_CreateThread);

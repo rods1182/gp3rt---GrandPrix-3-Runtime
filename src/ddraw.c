@@ -613,6 +613,8 @@ static HRESULT WINAPI dds_Flip(THIS_S, ddsurf_t *target, DWORD flags) { API_NOTE
     (void)target;
     TRACE("Flip(%p, flags=%x)", (void *)This, flags);
     if (!This->back) return DDERR_INVALIDPARAMS;
+    { extern int replayctl_held_frame(void);
+      if (replayctl_held_frame()) { DDLOCK(); g_pending_present = NULL; dds_present_now(This); DDUNLOCK(); if (!(flags & 8)) wait_vblank(); return 0; } }
     DDLOCK();
     /* rotate buffer memory along the chain: front <- back1 <- back2 ... <- front */
     ddsurf_t *chain[8]; int n = 0;

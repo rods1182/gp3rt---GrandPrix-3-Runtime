@@ -8,21 +8,21 @@ An independent project by Rodrigo Motta (Rods), developed with Claude (Anthropic
 
 ## Download and status
 
-Open **Releases** and download **GP3RT-1.1.0-Windows.zip**. GitHub's automatic **Source code** archives do not contain the ready-to-use DLL.
+Open **Releases** and download **GP3RT-1.2.0-Windows.zip**. GitHub's automatic **Source code** archives do not contain the ready-to-use DLL.
 
-The supplied Windows DLL identifies as version 1.1.0 and targets GP3 1.13 and GP3 2000 on Windows 10/11. This repository is Windows-only. The unfinished Linux project will be published separately when ready. Documentation was prepared through static inspection; no game execution or rebuild was performed.
+The supplied Windows DLL identifies as version 1.2.0 and targets GP3 1.13 and GP3 2000 on Windows 10/11. This repository is Windows-only. The Linux version is [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), in its own repository. Documentation was prepared through static inspection; no game execution or rebuild was performed.
 
 ## Features
 
 OpenGL rendering; configurable internal scaling and texture filtering; Hor+ widescreen on recognized game builds; borderless fullscreen and windowed mode; rain spray settings; GPU preferences; GPxPatch integration; PNG screenshots and diagnostic frame dumps.
 
-Version 1.0.1 includes a GP3 1.13 string-table guard addressing a crash observed with GPxPatch Debug mode. Version 1.0.2 fixes GP3 / GP3 2000 closing when entering the track. Version 1.0.3 raises GP3's per-frame geometry limit (2,999 -> 16,000 edges) and fixes the crash, missing car bodies and grey polygons on very detailed tracks with the TV camera pulled back (`edge_fix=1`). Version 1.1.0 is much lighter on the processor, handles textures faster on PCs without a dedicated GPU, fixes GP3 2000 closing in long races because of a bug in its own 3D sound (`sound_lock_fix=1`), and returns focus to the game when a hidden window steals it. It does not establish universal compatibility with every track or mod.
+Version 1.0.1 includes a GP3 1.13 string-table guard addressing a crash observed with GPxPatch Debug mode. Version 1.0.2 fixes GP3 / GP3 2000 closing when entering the track. Version 1.0.3 raises GP3's per-frame geometry limit (2,999 -> 16,000 edges) and fixes the crash, missing car bodies and grey polygons on very detailed tracks with the TV camera pulled back (`edge_fix=1`). Version 1.1.0 is much lighter on the processor, handles textures faster on PCs without a dedicated GPU, fixes GP3 2000 closing in long races because of a bug in its own 3D sound (`sound_lock_fix=1`), and returns focus to the game when a hidden window steals it. Version 1.2.0 adds GP3Replay.dll (GP3 1.13): a whole-race replay with no extra executable, replacing GP3 Video's gp3v.exe and inspired by Rafa's work; GP3 2000-style replay keys (F1 to F9, on-screen legend) with smooth rewind and fast forward; rain spray and smoke that no longer vanish after rewinding; and GP3 2000 replays up to 2 hours. It does not establish universal compatibility with every track or mod.
 
 ## Quick start
 
 1. Back up your game folder and existing wrappers.
 2. Move aside graphics wrappers you previously installed, especially an existing `ddraw.dll`. Preserve original game libraries.
-3. Place `ddraw.dll` and `gp3rt.ini` next to the game executable, never in System32.
+3. Place `ddraw.dll` and `gp3rt.ini` (and, for GP3 1.13, the optional `GP3Replay.dll`) next to the game executable, never in System32.
 4. Disable compatibility modes for the game and GPxPatch.
 5. In GPxPatch, select all CPU cores. Keep Debug enabled: with GP3RT it is required.
 6. Use hardware graphics. Select **1280×1024** for the widescreen override; the default INI maps it to desktop resolution.
@@ -35,6 +35,6 @@ The executable file on disk is not rewritten, but runtime hooks and patches modi
 
 Open an Issue with game/runtime versions, OS, CPU/GPU, driver, GPxPatch settings, track/mods, reproduction steps and `gp3rt.log`. Save the log before restarting. Ctrl+F11 captures a diagnostic frame in `screens/frame_NNNNN`; review it for personal information and mod content before sharing.
 
-Project and testing: Rodrigo Motta. Development assistance: Claude / Anthropic. Original game: Geoff Crammond / MicroProse. Widescreen FOV approach credited in source to WidePrix3 by hatcher the patcher. Special thanks to Stephan Séguin ("Seguin"), the first user and the one who spread the word, and to JF ("BeADriver") for the log that revealed GP3 2000's 3D sound bug. Thanks to GPxPatch authors and the GP3 community.
+Project and testing: Rodrigo Motta. Development assistance: Claude / Anthropic. Original game: Geoff Crammond / MicroProse. Widescreen FOV approach credited in source to WidePrix3 by hatcher the patcher. Special thanks to Stephan Séguin ("Seguin"), the first user and the one who spread the word, and to JF ("BeADriver") for the log that revealed GP3 2000's 3D sound bug. Thanks to Rafa, creator of Gp3Video, the inspiration for GP3Replay.dll. Thanks to GPxPatch authors and the GP3 community.
 
 Unofficial fan project; no commercial game assets or executables are included. No software license has been selected in this preparation; see [licensing status](STATUS-LICENCA.md).

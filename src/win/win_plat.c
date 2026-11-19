@@ -321,14 +321,17 @@ static LRESULT WINAPI sub_proc2(HWND h, UINT m, WPARAM w, LPARAM l) {
     case 0x200: case 0x201: case 0x202: case 0x203: case 0x204: case 0x205: case 0x206: case 0x207: case 0x208: case 0x209:
         l = map_mouse(l);
         break;
-    case 0x101: case 0x105: /* WM_KEYUP / WM_SYSKEYUP: Print Screen takes a screenshot; Ctrl+Print Screen also a frame dump */
+    case 0x100: case 0x101: if ((w >= 0x70 && w <= 0x78) || w == 0xdb || w == 0xdd || w == 'P' || w == 'R') { extern int replayctl_key(int vk, int down); if (replayctl_key((int)w, m == 0x100)) return 0; }
+        if (m == 0x100) goto keydown;
+        goto keyup;
+    case 0x105: keyup: /* WM_KEYUP / WM_SYSKEYUP: Print Screen takes a screenshot; Ctrl+Print Screen also a frame dump */
         if (w == 0x2C) {
             g_shot_pending = 1;
             if (GetAsyncKeyState(0x11) < 0) { extern void rdr_framedump_arm(void); rdr_framedump_arm(); LOG("frame dump requested (Ctrl+Print Screen)"); }
             return 0;
         }
         break;
-    case 0x100: /* WM_KEYDOWN: Ctrl+F11 = frame dump (Print Screen may be taken by GPxPatch) */
+    keydown: /* WM_KEYDOWN: Ctrl+F11 = frame dump (Print Screen may be taken by GPxPatch) */
         if (w == 0x7A && GetAsyncKeyState(0x11) < 0) { extern void rdr_framedump_arm(void); rdr_framedump_arm(); g_shot_pending = 1; LOG("frame dump requested (Ctrl+F11)"); return 0; }
         break;
     case 0x104: /* WM_SYSKEYDOWN: Alt+Enter toggles window/fullscreen */
@@ -772,3 +775,11 @@ static DWORD WINAPI watchdog_main(void *arg) {
     return 0;
 }
 void win_watchdog_start(void) { DWORD id; CreateThread(NULL, 0, watchdog_main, NULL, 0, &id); }
+
+void replayctl_inject_key(int vk, int scancode, int down) {
+    LPARAM l = 1 | ((LPARAM)(scancode & 0xff) << 16) | ((scancode & 0x100) ? 1 << 24 : 0) | (down ? 0 : (LPARAM)0xc0000000u);
+    if (g_hwnd) PostMessageA(g_hwnd, down ? 0x100 : 0x101, (WPARAM)vk, l);
+}
+
+int plat_key_held(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+int plat_key_poll(int vk) { if (g_hwnd && GetForegroundWindow() != g_hwnd) return 0; short r = GetAsyncKeyState(vk); return ((r & 0x8000) ? 1 : 0) | ((r & 1) ? 2 : 0); }
