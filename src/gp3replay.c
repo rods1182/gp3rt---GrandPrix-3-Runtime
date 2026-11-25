@@ -6,7 +6,7 @@
  * image); every address of it inside the patched code is relocated to where it landed.
  * Gp3.exe on disk is never touched.
  *
- * Loaded by gp3rt's ddraw.dll (Windows) and by GP3 Reborn (Linux) when it is in the game folder.
+ * Loaded by gp3rt's ddraw.dll (Windows) and by GP3RT (Linux) when it is in the game folder.
  * Any other loader works too: everything happens in DllMain. Only kernel32 is imported. */
 #include <stdint.h>
 #include "gp3replay_tab.h"

@@ -12,18 +12,21 @@ GP3RT é um projeto independente de Rodrigo Motta (Rods), desenvolvido com assis
 
 No Windows, uma `ddraw.dll` específica para esses jogos implementa o caminho gráfico legado usado pelo GP3, com renderização OpenGL. Copie a DLL e o arquivo de configuração para a pasta do jogo; os arquivos do jogo continuam necessários.
 
+No Linux, o GP3RT roda o Gp3.exe original sem Wine, com o mesmo código, as mesmas opções do `gp3rt.ini` e uma tela do GPxPatch própria. Essa edição se chamava **GP3 Reborn**; desde a 1.2.1 faz parte deste repositório, e as duas saem juntas, com o mesmo número de versão.
+
 ## Download
 
-Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.2.1-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
+Abra **Releases**, à direita desta página, e baixe o **GP3RT-1.2.1-Windows.zip** (Windows) ou o **GP3RT-1.2.1-Linux.tar.gz** (Linux 64 bits) da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
 
 ## Estado do projeto
 
 | Componente | Estado deste material |
 | --- | --- |
 | Windows | DLL 1.2.1 fornecida no pacote da comunidade |
+| Linux | Pacote 1.2.1 (gp3, gp3-game e a tela do GPxPatch), Linux 64 bits com SDL2; GPxPatch 4.52 não incluído |
 | Jogos reconhecidos pelo código | GP3 1.13 e GP3 2000; outras builds podem ter recursos específicos desativados |
 | Sistemas alvo | Windows 10 e 11; matriz de testes comunitários ainda em construção |
-| Escopo | Somente Windows; a versão Linux é o [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), em repositório próprio |
+| Escopo | Windows e Linux; a edição Linux era o GP3 Reborn ([repositório antigo, arquivado](https://github.com/rods1182/gp3reborn-linux)) |
 | Verificação desta documentação | Inspeção estática dos arquivos fornecidos; sem execução do jogo ou recompilação |
 
 ## Recursos
@@ -51,6 +54,8 @@ Os recursos foram identificados no código e nos materiais do pacote. Desempenho
 4. Desative modos de compatibilidade do executável e do GPxPatch.
 5. No GPxPatch, use **CPU = All / todos os núcleos** (o rótulo pode variar). Deixe o **Debug ligado**: com o GP3RT ele é necessário (desligado, o jogo pode fechar ao apertar "Pilotar"/"Drive").
 6. Abra o jogo e selecione o modo gráfico acelerado. Para widescreen, selecione **1280×1024**: o GP3RT usa a resolução definida no INI, por padrão a do desktop.
+
+No Linux: extraia o pacote na pasta do jogo e rode `./instalar-atalho.sh`, ou abra o `GPxPatch`. O passo a passo está no [LEIAME do Linux](linux/LEIAME.txt) e a compilação no [LINUX-BUILD.txt](LINUX-BUILD.txt).
 
 O configurador `GP3RT-Configurador.html`, incluído no download, é opcional: clique em "Abrir a pasta do jogo" e ele lê o `gp3rt.ini` e o `gp3rt.log` sozinho. No Chrome e no Edge salva direto na pasta; em outros navegadores baixa o INI para você copiar.
 
@@ -87,18 +92,21 @@ GP3RT is an independent project by Rodrigo Motta (Rods), developed with assistan
 
 On Windows, a game-specific `ddraw.dll` implements the legacy graphics functionality used by GP3, rendering through OpenGL. Copy the DLL and configuration file into the game folder; the original game files are still required.
 
+On Linux, GP3RT runs the original Gp3.exe without Wine, with the same code, the same `gp3rt.ini` options and its own GPxPatch screen. This edition used to be called **GP3 Reborn**; since 1.2.1 it lives in this repository, and both are released together with the same version number.
+
 ## Download
 
-Open **Releases** on the right side of this page and download **GP3RT-1.2.1-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
+Open **Releases** on the right side of this page and download **GP3RT-1.2.1-Windows.zip** (Windows) or **GP3RT-1.2.1-Linux.tar.gz** (64-bit Linux) from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
 
 ## Project status
 
 | Component | Current status |
 | --- | --- |
 | Windows | DLL version 1.2.1 supplied in the community package |
+| Linux | Package 1.2.1 (gp3, gp3-game and the GPxPatch screen), 64-bit Linux with SDL2; GPxPatch 4.52 not included |
 | Game builds recognized by the code | GP3 1.13 and GP3 2000; specific features may be disabled on other builds |
 | Target operating systems | Windows 10 and 11; the community testing matrix is still being developed |
-| Scope | Windows only; the Linux version is [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), in its own repository |
+| Scope | Windows and Linux; the Linux edition used to be GP3 Reborn ([old repository, archived](https://github.com/rods1182/gp3reborn-linux)) |
 | Documentation verification | Static inspection of the supplied files; this documentation review did not include running the game or rebuilding the DLL |
 
 ## Features
@@ -126,6 +134,8 @@ These features were identified in the code and package documentation. Performanc
 4. Disable compatibility modes for the game executable and GPxPatch.
 5. In GPxPatch, select **CPU = All / all cores** (the label may vary). Keep **Debug enabled**: with GP3RT it is required (with it off, the game can close when you press "Drive").
 6. Launch the game and select hardware-accelerated graphics. For widescreen, select **1280×1024**: GP3RT uses the resolution specified in the INI, which defaults to your desktop resolution.
+
+On Linux: extract the package into the game folder and run `./instalar-atalho.sh`, or open `GPxPatch`. Step by step in the [Linux README](linux/README.txt); building in [LINUX-BUILD.txt](LINUX-BUILD.txt).
 
 The optional `GP3RT-Configurador.html` configuration tool is included in the download. If your browser downloads a new INI file, copy it into the game folder, replacing the previous one.
 

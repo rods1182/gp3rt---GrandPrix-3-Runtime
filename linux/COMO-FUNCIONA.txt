@@ -1,0 +1,111 @@
+Como o Grand Prix 3 roda no Linux (GP3RT)
+==============================================
+
+(English: see HOW-IT-WORKS.txt)
+
+Em poucas palavras
+------------------
+O GP3RT não é um emulador e não é o Wine. É um "Windows de
+mentirinha", pequeno, feito só para o Grand Prix 3. O código de verdade do
+jogo, o do seu próprio Gp3.exe, roda direto no processador, na velocidade
+normal. Tudo o que o jogo pediria ao Windows (uma janela, gráficos 3D,
+som, o volante, os arquivos) é atendido pelo GP3RT e traduzido para o
+Linux.
+
+
+1. O que tem dentro do Gp3.exe
+------------------------------
+Um programa de Windows como o Gp3.exe tem dois tipos de conteúdo:
+
+  a) O jogo em si: física, pilotos, a corrida, os menus. É código de
+     máquina para processadores Intel/AMD. Ele não sabe se o PC roda
+     Windows ou Linux - o processador é o mesmo.
+
+  b) Pedidos ao Windows: "abra uma janela", "desenhe estes triângulos"
+     (DirectDraw / Direct3D 7), "toque este som" (DirectSound), "como está
+     o volante?" (DirectInput), "abra este arquivo", "que horas são?"...
+
+A parte (a) roda no Linux do jeito que está. A parte (b) é o que normalmente
+impede um jogo de Windows de rodar em outro lugar.
+
+
+2. O que o GP3RT faz
+-------------------------
+- Coloca o Gp3.exe na memória exatamente como o Windows faria (mesmos
+  endereços, mesma organização), e o código do jogo começa a rodar
+  nativamente.
+- Cada vez que o jogo chama o Windows, quem responde é o GP3RT:
+    gráficos  DirectDraw/Direct3D 7  ->  OpenGL 3.3 na sua placa de vídeo
+    som       DirectSound (com 3D)   ->  PulseAudio / PipeWire
+    controles DirectInput            ->  teclado, joystick, volante e force
+                                         feedback do Linux
+    arquivos  C:\GP3\...             ->  a sua pasta do jogo (acentos e
+                                         maiúsculas/minúsculas resolvidos)
+    vídeos    abertura em Bink       ->  tocados na janela
+- Ele implementa só o que o GP3 usa - algumas centenas de funções do Windows,
+  escritas e testadas com o próprio jogo. Por isso é pequeno e rápido, e
+  consegue fazer coisas que o original nunca fez.
+
+
+3. Dois programas, um jogo
+--------------------------
+O Gp3.exe é um programa de 32 bits; os Linux de hoje são de 64 bits. Por
+isso são dois programas:
+
+  gp3-game  (32 bits)  segura o Gp3.exe e roda o jogo. É "estático":
+                       você NÃO precisa instalar nenhuma biblioteca de
+                       32 bits.
+  gp3       (64 bits)  cuida da janela, dos gráficos em OpenGL, do som e
+                       dos controles, com as bibliotecas normais do seu
+                       sistema (SDL2, o driver de vídeo).
+
+Eles conversam por memória compartilhada, muitas vezes a cada quadro.
+Você só abre o "gp3" (ou o atalho do menu); ele chama o gp3-game sozinho.
+
+
+4. Melhor que o original
+------------------------
+Como quem desenha é o GP3RT, e não um driver de 1998:
+- tela cheia na resolução da sua área de trabalho, sem trocar o modo do
+  monitor; Alt+Enter para janela;
+- widescreen de verdade com campo de visão "Hor+" (mais imagem dos lados,
+  sem esticar);
+- o 3D desenhado em 2x a 4x e reduzido (sem serrilhado), com filtragem
+  anisotrópica;
+- a placa de vídeo dedicada escolhida sozinha em notebooks com duas;
+- spray de chuva mais suave perto das câmeras de TV;
+- limites antigos do GP3 aumentados: pistas muito detalhadas da
+  comunidade não perdem mais a carroceria dos carros, não mostram
+  polígonos cinza e não fecham com a câmera afastada e muitos carros
+  (espaço para 16.000 bordas de polígonos por quadro, em vez de 2.999);
+- o GP3 2000 não fecha mais em corridas longas: o som 3D dele protege a
+  lista de sons com uma trava que não trava de verdade, e em
+  processadores de vários núcleos um som podia ser apagado ainda
+  tocando. O GP3RT corrige essa trava na memória;
+- desenho mais leve: cada quadro vai para a placa de vídeo de uma vez, e
+  as texturas são convertidas, reaproveitadas e filtradas com menos
+  trabalho (ajuda muito em placas Intel);
+- replay da corrida inteira no GP3 1.13 (com o GP3Replay.dll, o mesmo
+  arquivo do Windows) e teclas do replay como no GP3 2000: o GP3RT
+  guarda uma foto da corrida por segundo, então voltar e avançar são
+  suaves e o replay continua idêntico à corrida. O spray da chuva e a
+  fumaça não somem mais depois de voltar;
+- replay de até 2 horas no GP3 2000, em vez de 1h30.
+
+
+5. E o GPxPatch?
+----------------
+No Windows, o GPxPatch.exe abre o GP3 e coloca os módulos dele
+(GPxPSup.dll e as DLLs da pasta gpxpdata) dentro do jogo. No Linux, o GP3RT
+carrega esses mesmos módulos no jogo do mesmo jeito, sem mudar
+nenhum arquivo do GPxPatch. O programa "GPxPatch" deste pacote substitui
+só a janela de configuração do Windows: lê e grava os mesmos arquivos .ini
+e .set. O GPxPatch em si é trabalho de René Smit e deve ser baixado no
+site dele (veja o LEIAME.txt, parte 2).
+
+
+6. O que NÃO vem junto
+----------------------
+Nenhum arquivo do jogo, nenhum Gp3.exe, nenhum GPxPatch. Você usa a sua
+cópia do jogo (GP3 1.13 ou GP3 2000, executável sem SafeDisc) e, se
+quiser, o GPxPatch 4.52 de https://www.sdidit.nl.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build GP3Replay.dll (32-bit Windows; also loaded by GP3 Reborn on Linux) with clang + lld-link.
+# Build GP3Replay.dll (32-bit Windows; also loaded by GP3RT on Linux) with clang + lld-link.
 set -e
 cd "$(dirname "$0")"
 OUT=build/win

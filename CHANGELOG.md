@@ -7,6 +7,7 @@ Resumo do histórico distribuído com o pacote; sem datas de lançamento confirm
 - Replay depois de carregar uma corrida salva (GP3 1.13): voltava só até o ponto do carregamento, porque as fotos de 1 em 1 segundo ficam só na memória. O save do GP3Replay.dll guarda também as fotos do próprio GP3 (uma a cada ~32 s) e o buffer de comandos inteiro; ao abrir o replay, a parte que falta é tirada delas, e as fotos de 1 segundo são refeitas enquanto o replay passa pelo trecho (conferido passo a passo com a corrida). Relatado por Stephan Séguin.
 - Apertar R logo depois de carregar o save (corrida parada, sem P antes) deixava o replay preso voltando (F5 aceso): o relógio da corrida só era anotado com a corrida andando. Agora é anotado a cada quadro.
 - Teclas novas no replay: Shift+F1 (largada) e Shift+F2 (ponto em que a corrida parou, pausado). O GP3 e o GPxPatch não usam essas combinações; as duas estão na legenda.
+- O GP3 Reborn (Linux) passa a se chamar **GP3RT para Linux** e vem para este repositório, com todo o código (`host/`, scripts de compilação, `linux/` com os textos e o configurador do pacote). Os dois pacotes saem juntos: GP3RT-x.y.z-Windows.zip e GP3RT-x.y.z-Linux.tar.gz. O histórico da edição Linux até a 1.2.1 está em [linux/HISTORICO-GP3-REBORN.md](linux/HISTORICO-GP3-REBORN.md).
 
 ## 1.2.0
 

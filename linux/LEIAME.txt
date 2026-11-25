@@ -1,0 +1,245 @@
+GP3RT 1.2.1 para Linux
+Grand Prix 3 e Grand Prix 3 2000 nativos no Linux - sem Wine, sem Proton, sem Steam
+==================================================================================
+
+(English: see README.txt)
+
+Este projeto se chamava GP3 Reborn. Agora é a edição para Linux do GP3RT:
+mesmo código, mesmos números de versão e mesmas opções do gp3rt.ini do
+ddraw.dll do Windows, lançados juntos em https://github.com/rods1182/gp3rt---grandprix-3-runtime
+
+
+1. COMEÇO RÁPIDO
+----------------
+1. Tenha a pasta do jogo: Grand Prix 3 1.13 (Gp3.exe) ou Grand Prix 3 2000
+   ("gp3 2000.exe"), com o executável SEM SafeDisc (veja a parte 4). Pode
+   ser a pasta copiada do Windows; coloque-a na sua pasta pessoal.
+2. Descompacte este pacote e copie TODOS os arquivos para a pasta do jogo
+   (a pasta onde está o Gp3.exe).
+3. Dê dois cliques em "gp3". O jogo abre e, na primeira vez, aparece
+   "Grand Prix 3" (ou "Grand Prix 3 2000") no menu de aplicativos. Daí
+   em diante, use esse atalho.
+   Se nada acontecer: botão direito em "gp3" > Propriedades > Permissões >
+   marque "Permitir executar o arquivo como um programa". Faça o mesmo com
+   "gp3-game" e "GPxPatch".
+4. Opcional: configurações (qualidade da imagem, widescreen, janela, placa
+   de vídeo) - abra o "GP3RT-Configurador.html" no navegador (parte 6).
+5. Opcional: GPxPatch - leia a parte 2.
+
+
+2. GPxPATCH: COMO OBTER E COLOCAR NO JOGO
+-----------------------------------------
+O GPxPatch 4.52 é o famoso patch de René Smit para o GP3 (gráficos de TV,
+conjuntos de pistas e de carros, temporadas, tempos de volta, sons
+extras...). Ele é trabalho DELE e NÃO vem neste pacote. Este pacote traz
+só o "GPxPatch", uma tela de configuração e lançador feita para o Linux,
+que lê e grava os mesmos arquivos do GPxPatch do Windows.
+
+a) Baixe o GPxPatch 4.52 no site do autor:
+     https://www.sdidit.nl/download.html  ->  inst-gpxpatch452.exe
+   É um instalador de Windows.
+
+b) Coloque-o na pasta do jogo. O GP3RT precisa, na pasta do jogo, de:
+     GPxPSup.dll        (arquivo)
+     gpxpdata\          (pasta, com tudo o que tem dentro)
+   Escolha UM caminho:
+
+   - Já tem o GP3 com GPxPatch no Windows? Copie de lá o GPxPSup.dll e a
+     pasta gpxpdata para a pasta do jogo no Linux. As suas configurações,
+     conjuntos de pistas e de carros vão junto.
+
+   - Num PC com Windows: rode o inst-gpxpatch452.exe, instale numa pasta do
+     GP3 de lá e depois copie o GPxPSup.dll e a pasta gpxpdata para a pasta
+     do jogo no Linux.
+
+   - No Linux, com o Wine (só para o instalador; o jogo em si nunca usa o
+     Wine): no terminal, rode
+         wine inst-gpxpatch452.exe
+     e, quando ele perguntar onde instalar, escolha a pasta do jogo. No
+     Wine, os seus arquivos do Linux ficam no drive Z: (por exemplo
+     Z:\home\seunome\GP3). Se ele instalar em outro lugar, copie de lá o
+     GPxPSup.dll e a pasta gpxpdata para a pasta do jogo.
+
+c) Dê dois cliques em "GPxPatch" na pasta do jogo. Aparecem as guias do
+   GPxPatch (GPxSet, GPxTrack, GPxLap, GPxSAT, GPxCInfo, GPxSound, teclas,
+   fontes, vídeo e jogo). Na primeira guia, "Criar atalhos" põe
+   "GPxPatch (Grand Prix 3)" no menu e na área de trabalho.
+   "Iniciar com GPxPatch" / "Iniciar sem GPxPatch" abrem o jogo.
+
+Configurações importantes do GPxPatch:
+- Debug: LIGADO. O GP3RT precisa dele (desligado, o jogo pode
+  fechar ao apertar "Pilotar").
+- CPU: todos os núcleos ("full").
+
+Observações:
+- NÃO use o GPxPatch.exe: é um programa de Windows. No Linux, o "GPxPatch"
+  faz o papel dele, e o jogo carrega os módulos do GPxPatch sozinho.
+- As configurações ficam nos mesmos arquivos da gpxpdata, então a mesma
+  pasta funciona no Windows e no Linux.
+- Algumas pistas da comunidade pedem configurações próprias no GPxPatch
+  (por exemplo, um comprimento máximo de pista maior). Siga o leia-me que
+  vem com a pista.
+- "gpxpatch=0" no gp3rt.ini (ou "Iniciar sem GPxPatch") abre o jogo puro,
+  mesmo com o GPxPatch instalado.
+
+
+3. O QUE VEM NESTE PACOTE
+-------------------------
+  gp3                        abre o jogo (janela, vídeo, som, controles)
+  gp3-game                   roda o Gp3.exe por dentro (o gp3 chama ele)
+  GPxPatch                   tela de configuração e lançador do GPxPatch
+                             para Linux (o GPxPatch em si: veja a parte 2)
+  GP3RT-Configurador.html  edita o gp3rt.ini no navegador
+  GP3Replay.dll              replay da corrida inteira no GP3 1.13 (opcional)
+  gp3rt.ini                  configurações de vídeo e jogo
+  instalar-atalho.sh         (opcional) cria os atalhos pelo terminal
+  icones/                    ícones
+  COMO-FUNCIONA.txt          como o jogo roda no Linux (explicação simples)
+  LEIAME.txt / README.txt    este texto, em português / inglês
+  HOW-IT-WORKS.txt           como funciona, em inglês
+  LICENSE-font-Inter.txt     licença da fonte usada na tela do GPxPatch
+  codigo-fonte.tar.gz        código-fonte
+
+
+4. O QUE VOCÊ PRECISA
+---------------------
+- Linux de 64 bits em PC comum (Intel ou AMD, "x86-64"). Testado no Linux
+  Mint e no Ubuntu 24.04; feito para rodar no Debian, Fedora,
+  Arch/Manjaro, openSUSE, Pop!_OS, Zorin e derivados (glibc 2.17 ou mais
+  nova).
+- NÃO roda em ARM (Raspberry Pi, Mac com chip Apple, celulares): o Gp3.exe
+  é código de processador Intel/AMD.
+- Placa de vídeo com OpenGL 3.3 (NVIDIA, AMD ou Intel). Notebooks com duas
+  placas usam a dedicada sozinhos.
+- SDL2 (já vem na maioria dos sistemas). Se faltar:
+    Mint / Ubuntu / Debian:  sudo apt install libsdl2-2.0-0
+    Fedora:                  sudo dnf install SDL2
+    Arch / Manjaro:          sudo pacman -S sdl2
+  A tela do GPxPatch precisa da SDL2 2.0.18 ou mais nova; em sistemas mais
+  antigos ela abre no navegador, com as mesmas opções.
+- Som pelo PulseAudio ou PipeWire. Volante e joystick (com force feedback)
+  pelos drivers do próprio Linux.
+- O jogo: a pasta instalada, com o executável SEM SafeDisc:
+    Grand Prix 3 1.13     Gp3.exe          (~8,6 MB)
+    Grand Prix 3 2000     gp3 2000.exe     (~8,7 MB)
+  O GP3RT encontra os dois nomes; não precisa renomear nada. Se o
+  jogo está numa partição do Windows, copie a pasta inteira para a sua
+  pasta pessoal (o jogo grava saves, configurações e registros nela).
+
+
+5. NÃO USE O Gp3.exe / gp3 2000.exe
+-----------------------------------
+São programas de Windows. Deixe-os na pasta (o GP3RT os carrega por
+dentro), mas abra o jogo sempre pelo "gp3", pelo atalho "Grand Prix 3" ou
+pela tela do GPxPatch. Não precisa do Wine; se o sistema oferecer abrir
+os .exe com o Wine, recuse.
+
+
+6. CONFIGURAÇÕES (gp3rt.ini)
+----------------------------
+Abra o GP3RT-Configurador.html no navegador (funciona sem internet):
+"Abrir a pasta do jogo", escolha a pasta do jogo: ele lê o gp3rt.ini e os
+últimos logs sozinho, mostra a placa de vídeo e o jogo encontrados e
+explica cada opção ("Mais detalhes"). Mude o que quiser, "Salvar". No
+Chrome/Chromium o arquivo é gravado no lugar (e a pasta fica lembrada). No Firefox ele
+vai para a pasta Downloads: copie para a pasta do jogo, substituindo o
+antigo. A tela do GPxPatch (guia "Vídeo e jogo") mexe nas mesmas opções.
+
+Principais opções:
+  Imagem:  resolução interna do 3D (auto, 1x a 4x), filtragem
+           anisotrópica, suavizar texturas, V-Sync, perfis prontos.
+  Widescreen: no menu de gráficos do jogo escolha 1280x1024; ela vira a
+           resolução da área de trabalho (ou a que você escolher), com
+           campo de visão Hor+ (mais imagem dos lados, sem esticar).
+  Tela:    tela cheia ou janela (Alt+Enter no jogo), tamanho da janela,
+           qual placa de vídeo em notebooks com duas.
+  Chuva:   opacidade do spray e da fumaça (100% = original; menos evita a
+           "parede cinza" perto das câmeras de TV).
+  Jogo:    GPxPatch ligado/desligado, pistas além dos limites originais,
+           vídeos de abertura, som 3D, teclado numérico.
+  Replay:  replay da corrida inteira e teclas do GP3 2000 no GP3 1.13,
+           spray e fumaça no replay, replay de 2 horas no GP3 2000.
+
+
+7. NO JOGO
+----------
+Alt+Enter   tela cheia / janela
+Print Scr   captura de tela (PNG, na pasta "screens" do jogo)
+Alt+F4      fecha
+Esc         pula os vídeos de abertura
+Volante: aparece no menu de controles do GP3 com o nome que o Linux dá a
+ele. Calibre no menu do jogo, como no Windows.
+
+NO REPLAY (GP3 1.13; R abre o replay já tocando, a partir do início da
+volta, com ou sem P antes; a legenda aparece embaixo da tela):
+  F1 / F2     volta anterior / próxima volta
+  Shift+F1    vai para a largada
+  Shift+F2    vai para o ponto em que a corrida parou (fica pausado)
+  F3 ou P     play / pausa
+  F4          câmera lenta (enquanto segura); pausado: um quadro
+  F5 / F8     voltar / avançar rápido (enquanto segura)
+  F6 / F7     um quadro para trás / para a frente (segurando, repete)
+  F9          mostra / esconde a legenda
+O replay termina no ponto em que você pausou; aí P continua a corrida.
+Com o GP3Replay.dll na pasta, o replay guarda a CORRIDA INTEIRA (mais de 2
+horas), sem precisar do gp3v.exe do GP3 Video. Durante a corrida o GP3RT
+guarda uma foto por segundo (uns 10 KB cada): é com elas que voltar
+e avançar ficam suaves e com a câmera certa.
+Depois de carregar uma corrida salva, o replay também volta até a largada:
+ele usa as fotos que o GP3Replay.dll guarda no save (uma a cada 32 s) e
+refaz as de 1 segundo enquanto passa pelo trecho.
+No GP3 2000 as teclas do replay são as do próprio jogo, e o replay vai
+até 2 horas (Options > Graphics > Length of replay; o jogo parava em 1h30).
+
+
+8. ACENTOS (ç, ã, é, ñ...)
+--------------------------
+O GP3 e o GPxPatch gravam os textos no formato antigo do Windows (Latin-1
+/ Windows-1252); o Linux usa UTF-8. O GP3RT lê os dois e encontra os
+arquivos mesmo quando o acento do nome estragou ao descompactar. A tela do
+GPxPatch mostra os acentos certos e converte para Latin-1 os arquivos em
+UTF-8. Para editar à mão (Xed, do Linux Mint): Arquivo > Abrir >
+Codificação "Ocidental (WINDOWS-1252)", e mantenha ao salvar. Prefira
+nomes de arquivos e pastas sem acentos.
+
+
+9. SE ALGO DER ERRADO
+---------------------
+Registros na pasta do jogo:
+  gp3linux.log           janela, vídeo, som, controles
+  gp3linux-game.log      o jogo
+  gp3linux-gpxpatch.log  a tela do GPxPatch
+  gpxpdata/log/          os módulos do GPxPatch
+Mande esses arquivos com a descrição do problema (versão do jogo 1.13 ou
+2000, pista, câmera).
+- Nada acontece com dois cliques: permissão de execução (parte 1, passo 3).
+- "game executable not found": falta o Gp3.exe / "gp3 2000.exe".
+- O jogo fecha na hora e o gp3linux-game.log fala em "SafeDisc": use um
+  executável sem SafeDisc.
+- A tela do GPxPatch diz que ele não está instalado: falta o GPxPSup.dll
+  ou a pasta gpxpdata na pasta do jogo (parte 2).
+
+
+10. CRÉDITOS
+------------
+GP3RT para Linux: Rodrigo Motta, com Claude (Anthropic).
+
+Agradecimento especial a:
+- Stephan Séguin ("Seguin" no GrandPrixGames.org): o primeiro usuário e
+  o primeiro retorno; divulgou o projeto no GrandPrixGames.org, no
+  GP2Forum e no grupo Grand Prix Games do Facebook; e o relato do replay
+  depois de carregar uma corrida salva (corrigido na 1.2.1). Merci, Stephan!
+- JF ("BeADriver" no GrandPrixGames.org): o log que revelou o erro do som
+  3D do GP3 2000 em corridas longas e o teste da correção.
+- Rafa, criador do Gp3Video, que há anos deu ao GP3 1.13 o replay da
+  corrida inteira. Ele foi a inspiração do GP3Replay.dll, que faz a mesma
+  ampliação do replay sem precisar de um executável à parte.
+
+GPxPatch 4.52 (c) 2001-2019 René Smit - não incluído; baixe em
+https://www.sdidit.nl. Obrigado, René!
+Grand Prix 3 e Grand Prix 3 2000 (c) Geoff Crammond / MicroProse. Os
+arquivos do jogo não fazem parte deste pacote.
+Componentes: SDL2 (licença zlib), Nuklear (domínio público / MIT), fonte
+Inter (c) Rasmus Andersson (SIL Open Font License, veja
+LICENSE-font-Inter.txt).
+Código-fonte: codigo-fonte.tar.gz.

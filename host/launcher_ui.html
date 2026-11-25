@@ -1,0 +1,1535 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPxPatch</title>
+<style>
+:root{
+  --bg:#15171a; --panel:#1d2024; --panel2:#24282d; --line:#33383f; --text:#e7e9ec; --muted:#9aa1ab;
+  --accent:#e8432f; --accent2:#ff6a4d; --ok:#3fb950; --warn:#e3b341; --field:#111316; --focus:#5aa0ff;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#eef0f3; --panel:#ffffff; --panel2:#f5f6f8; --line:#d5d9df; --text:#1b1e22; --muted:#5d6570;
+    --field:#ffffff; --accent:#d4351f; --accent2:#e8432f;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Ubuntu,Cantarell,"Noto Sans",sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.logo{font-weight:800;font-size:19px;letter-spacing:.2px}
+.logo b{color:var(--accent)}
+.meta{color:var(--muted);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wrap{display:flex;min-height:calc(100vh - 128px)}
+nav{width:190px;flex:none;border-right:1px solid var(--line);padding:10px 8px;background:var(--panel)}
+nav button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--text);padding:9px 12px;border-radius:7px;font:inherit;cursor:pointer;margin-bottom:2px}
+nav button:hover{background:var(--panel2)}
+nav button.on{background:var(--accent);color:#fff;font-weight:600}
+nav .sep{height:1px;background:var(--line);margin:8px 6px}
+main{flex:1;min-width:0;padding:18px 22px 30px;max-width:980px}
+h2{margin:0 0 4px;font-size:20px}
+.sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+.group{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px 6px;margin-bottom:14px}
+.group h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700}
+.row{display:flex;align-items:center;gap:12px;padding:7px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.group h3 + .row{border-top:0}
+.row label.l{flex:1;min-width:0}
+.row .hint{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.row .c{flex:none;display:flex;align-items:center;gap:6px}
+input[type=text],input[type=number],select{background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;min-width:0}
+input[type=number]{width:96px}
+input.wide,select.wide{width:330px;max-width:52vw}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.unit{color:var(--muted);font-size:12.5px}
+/* switch */
+.sw{position:relative;width:42px;height:24px;flex:none}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw span{position:absolute;inset:0;background:var(--line);border-radius:12px;transition:.15s;cursor:pointer}
+.sw span:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.sw input:checked + span{background:var(--accent)}
+.sw input:checked + span:before{transform:translateX(18px)}
+.sw input:focus-visible + span{outline:2px solid var(--focus)}
+footer{position:sticky;bottom:0;display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:9px 16px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.small{padding:5px 10px;font-weight:500;font-size:13px}
+#status{color:var(--muted);font-size:13px;margin-left:auto}
+#saved{font-size:12.5px;color:var(--ok);opacity:0;transition:opacity .3s}
+#saved.show{opacity:1}
+.notice{background:color-mix(in srgb,var(--warn) 14%,var(--panel));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line));border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13.5px}
+table.k{width:100%;border-collapse:collapse}
+table.k td{padding:5px 6px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+table.k td.act{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace}
+.keybtn{min-width:96px;font-family:ui-monospace,monospace;font-weight:600}
+.keybtn.wait{background:var(--accent);color:#fff;border-color:var(--accent)}
+.keybtn.dup{border-color:var(--warn);color:var(--warn)}
+.slot{display:grid;grid-template-columns:36px 150px 1fr;gap:10px;align-items:center;padding:6px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.slot .n{color:var(--muted);font-family:ui-monospace,monospace}
+.slot select{width:100%}
+.fontcard{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px;background:var(--panel2)}
+.fontcard .head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.fontcard .head b{font-family:ui-monospace,monospace}
+.empty{color:var(--muted);padding:6px 0}
+.slot{grid-template-columns:36px 150px 1fr auto}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(720px,100%);max-height:86vh;display:flex;flex-direction:column}
+.modal .top{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.modal .path{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--muted);flex:1;min-width:0;overflow-wrap:anywhere}
+.modal .list{overflow:auto;padding:6px 8px}
+.modal .it{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);font:inherit;padding:7px 10px;border-radius:6px;cursor:pointer}
+.modal .it:hover{background:var(--panel2)}
+.modal .it.dat{font-weight:600}
+.modal .bot{padding:10px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end}
+@media (max-width:760px){
+  .wrap{flex-direction:column}
+  nav{width:auto;display:flex;flex-wrap:wrap;gap:4px;border-right:0;border-bottom:1px solid var(--line)}
+  nav button{width:auto}
+  nav .sep{display:none}
+  main{padding:14px 16px}
+  .row{flex-wrap:wrap}
+  input.wide,select.wide{width:100%;max-width:none}
+  .slot{grid-template-columns:30px 1fr auto}
+  .slot select{grid-column:1/-1;grid-row:2}
+}
+.lang{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;margin-left:auto}
+.lang select{padding:4px 6px}
+.filepick{display:flex;gap:6px;align-items:center}
+.filepick input{width:300px;max-width:42vw}
+.banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.banner span{flex:1;min-width:220px}
+.setbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:760px){ .filepick{flex-wrap:wrap} .filepick input{width:100%;max-width:none} }
+/* season / car set editors (GP3 2000) */
+table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
+table.grid th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px}
+table.grid td{padding:4px 6px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);vertical-align:middle}
+table.grid td.t{width:190px}
+table.grid td.t b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.grid td.t span{display:block;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jampick{display:flex;gap:4px;align-items:center;min-width:0}
+.jampick input{flex:1;min-width:0;width:100%;font-size:12.5px;padding:5px 6px}
+.jampick .btn{padding:4px 8px;flex:none}
+input.missing{border-color:var(--warn);color:var(--warn)}
+.filepick input.missing{border-color:var(--warn)}
+.pts{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px 10px;padding:6px 0 10px}
+.pts label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.pts input{width:56px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:4px 0 8px}
+.tools .hint{color:var(--muted);font-size:12px}
+@media (max-width:760px){ table.grid td.t{width:110px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">GPx<b>Patch</b> <span id="for">para Linux</span></div>
+  <div class="meta" id="meta">…</div>
+  <div class="lang"><label for="lang" id="langl">Idioma</label><select id="lang"><option value="pt">Português</option><option value="en">English</option></select></div>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<footer>
+  <button class="btn primary" id="go" title="Ctrl+S"></button>
+  <button class="btn" id="go0"></button>
+  <span id="saved"></span>
+  <span id="status"></span>
+</footer>
+<script>
+"use strict";
+const TOKEN = new URLSearchParams(location.search).get("t") || "";
+const DEL = "\x7f";
+let S = null, INI = {}, running = false, LANG = "pt";
+
+/* ---------- language ---------- */
+function L(pt, ...a){
+  let s = (LANG == "en" && EN[pt] !== undefined) ? EN[pt] : pt;
+  return a.length ? s.replace(/\{(\d)\}/g, (m, i) => a[+i]) : s;
+}
+
+/* ---------- ini ---------- */
+function parseIni(text){
+  const o = {}; let cur = null;
+  if (text == null) return o;
+  for (const raw of text.split(/\r?\n/)){
+    const s = raw.trim();
+    if (!s || s[0]==";" || s[0]=="#") continue;
+    if (s[0]=="[" && s.indexOf("=") > 0 && s.indexOf("=") < s.indexOf("]")) continue;   // "[Jam01=...]": a disabled entry
+    if (s[0]=="["){ const e = s.indexOf("]"); if (e>0){ const n = s.slice(1,e); cur = o[n.toLowerCase()] || (o[n.toLowerCase()] = {name:n, keys:{}}); } continue; }
+    const eq = s.indexOf("="); if (eq<0 || !cur) continue;
+    const k = s.slice(0,eq).trim(); cur.keys[k.toLowerCase()] = {k, v:s.slice(eq+1).trim()};
+  }
+  return o;
+}
+function get(f, s, k, d){
+  const sec = INI[f] && INI[f][s.toLowerCase()]; const e = sec && sec.keys[k.toLowerCase()];
+  return e ? e.v : (d === undefined ? "" : String(d));
+}
+function has(f, s, k){ const sec = INI[f] && INI[f][s.toLowerCase()]; return !!(sec && sec.keys[k.toLowerCase()]); }
+function setLocal(f, s, k, v){
+  const F = INI[f] || (INI[f] = {}); const sec = F[s.toLowerCase()] || (F[s.toLowerCase()] = {name:s, keys:{}});
+  if (v === DEL) delete sec.keys[k.toLowerCase()]; else sec.keys[k.toLowerCase()] = {k, v:String(v)};
+}
+
+/* ---------- saving ---------- */
+let queue = [], timer = null;
+function put(f, s, k, v){
+  v = String(v); setLocal(f, s, k, v);
+  queue = queue.filter(q => !(q[0]==f && q[1].toLowerCase()==s.toLowerCase() && q[2].toLowerCase()==k.toLowerCase()));
+  queue.push([f, s, k, v]);
+  clearTimeout(timer); timer = setTimeout(flush, 250);
+}
+async function flush(){
+  clearTimeout(timer); if (!queue.length) return true;
+  const body = queue.map(q => q.map(x => String(x).replace(/[\t\r\n]/g," ")).join("\t")).join("\n"); queue = [];
+  try{
+    const j = await (await api("/api/save", body)).json();
+    const e = document.getElementById("saved");
+    if (j.failed){ e.textContent = "⚠ " + L("{0} valor(es) não salvos", j.failed); e.style.color = "var(--warn)"; }
+    else { e.textContent = "✓ " + L("salvo"); e.style.color = ""; }
+    e.classList.add("show"); setTimeout(()=>e.classList.remove("show"), 1400);
+    return !j.failed;
+  }catch(e){ status(L("Sem conexão com o GP3RT: feche esta aba e abra de novo pelo atalho.")); return false; }
+}
+function api(path, body){ return fetch(path, {method: body===undefined ? "GET" : "POST", headers:{"X-Token":TOKEN}, body}); }
+function status(t){ document.getElementById("status").textContent = t; }
+
+/* ---------- widgets ---------- */
+const el = (t, a={}, ...kids) => { const e = document.createElement(t); for (const [k,v] of Object.entries(a)){ if (k=="class") e.className=v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v!==undefined && v!==null) e.setAttribute(k, v); } for (const c of kids) if (c!=null) e.append(c); return e; };
+let uid = 0;
+function row(label, hint, ...ctl){
+  const id = "f" + (++uid);
+  const first = ctl[0]; if (first && first.querySelector){ const inp = first.matches("input,select") ? first : first.querySelector("input,select"); if (inp) inp.id = id; }
+  return el("div",{class:"row"}, el("label",{class:"l", for:id}, L(label), hint ? el("span",{class:"hint"}, L(hint)) : null), el("div",{class:"c"}, ...ctl));
+}
+function notice(t){ return el("div",{class:"notice"}, t); }
+/* one option = {t:type, f:file, s:section, k:key, d:default, label, hint, ...} */
+function widget(o){
+  /* A key missing from a GPx .ini means the module's own default, which is often not the one
+     the Windows GPxPatch shows (e.g. the GPxSAT [Sky] options are off when missing). Like the
+     Windows GUI when it saves, write the value shown here so that what you see is what runs. */
+  if (/^gpx[a-z]*\.ini$/i.test(o.f) && o.t != "file" && o.t != "jam" && o.d !== undefined && o.d !== "" && !has(o.f, o.s, o.k))
+    put(o.f, o.s, o.k, o.t == "num" && o.float ? fmtFloat(o.d) : o.d);
+  const cur = get(o.f, o.s, o.k, o.d);
+  if (o.t=="check"){
+    const on = (v) => o.inv ? !(+v) : !!(+v);
+    const i = el("input",{type:"checkbox"}); i.checked = on(cur);
+    i.addEventListener("change", () => { put(o.f, o.s, o.k, (o.inv ? !i.checked : i.checked) ? 1 : 0); if (o.after) o.after(i.checked); });
+    return row(o.label, o.hint, el("label",{class:"sw"}, i, el("span")));
+  }
+  if (o.t=="num"){
+    const i = el("input",{type:"number", min:o.min, max:o.max, step:o.step||1}); i.value = parseFloat(cur);
+    if (isNaN(parseFloat(cur))) i.value = o.d;
+    i.addEventListener("change", () => { let v = i.value===""? o.d : +i.value; if (o.min!=null) v = Math.max(o.min, v); if (o.max!=null) v = Math.min(o.max, v); i.value = v; put(o.f, o.s, o.k, o.float ? fmtFloat(v) : Math.round(v)); });
+    return row(o.label, o.hint, i, o.unit ? el("span",{class:"unit"}, L(o.unit)) : null);
+  }
+  if (o.t=="select" || o.t=="font"){
+    let opts = o.opts;
+    if (o.t=="font") opts = fontNames().map(n => [n, n]);
+    if (typeof opts == "function") opts = opts();
+    const s = el("select",{class: o.wide ? "wide" : ""});
+    let found = false;
+    for (const [v, l] of opts){ const op = el("option",{value:v}, L(l)); if (String(v).toLowerCase()==String(cur).toLowerCase()){ op.selected = true; found = true; } s.append(op); }
+    if (!found && cur!==""){ const op = el("option",{value:cur}, cur); op.selected = true; s.prepend(op); }
+    s.addEventListener("change", () => { put(o.f, o.s, o.k, s.value); if (o.after) o.after(s.value); });
+    return row(o.label, o.hint, s);
+  }
+  if (o.t=="text"){
+    const i = el("input",{type:"text", class:"wide", placeholder:o.ph ? L(o.ph) : ""}); i.value = cur;
+    i.addEventListener("change", () => put(o.f, o.s, o.k, i.value.trim()));
+    return row(o.label, o.hint, i);
+  }
+  if (o.t=="file"){   // a file inside the game folder, chosen with the folder browser
+    const i = el("input",{type:"text", placeholder:L("nenhum arquivo")}); i.value = cur; i.dataset.alts = cur;
+    i.addEventListener("change", () => { put(o.f, o.s, o.k, i.value.trim()); i.dataset.alts = i.value.trim(); checkFiles(); });
+    const b = el("button",{class:"btn small"}, L("Procurar…"));
+    b.addEventListener("click", () => browse({ext:o.ext, start: cur ? fromGame(cur).replace(/\/[^\/]*$/,"") : (o.startDir ? S.dir + "/" + o.startDir : S.dir), title:o.label}, v => { i.value = v; i.dataset.alts = v; put(o.f, o.s, o.k, v); checkFiles(); }));
+    return row(o.label, o.hint, el("div",{class:"filepick"}, i, b));
+  }
+  if (o.t=="jam") return row(o.label, o.hint, jamBox(o, false));
+  if (o.t=="color"){
+    const n = parseInt(cur, 16) >>> 0; const a = (n >>> 24) & 255; const rgb = "#" + (n & 0xffffff).toString(16).padStart(6,"0");
+    const i = el("input",{type:"color", value:rgb});
+    i.addEventListener("change", () => { const v = parseInt(i.value.slice(1),16); put(o.f, o.s, o.k, "0x" + (((a<<24)>>>0) + v).toString(16).padStart(8,"0")); });
+    return row(o.label, o.hint, i);
+  }
+  return null;
+}
+function fmtFloat(v){ const s = String(+v); return s.includes(".") ? s : s + "."; }
+function group(title, items, note){
+  const g = el("div",{class:"group"}, el("h3",{}, L(title)));
+  if (note) g.append(el("div",{class:"hint", style:"color:var(--muted);font-size:12.5px;margin:-2px 0 6px"}, L(note)));
+  for (const it of items){ if (!it) continue; const w = it instanceof Node ? it : widget(it); if (w) g.append(w); }
+  return g;
+}
+function fontNames(){
+  const F = INI["fonts.ini"] || {}; const names = Object.values(F).map(s => s.name);
+  for (const d of ["courier","din-bold","ATL2004","digital2004","futura","manana"]) if (!names.some(n => n.toLowerCase()==d.toLowerCase())) names.push(d);
+  return names;
+}
+const B = (f,s,k,d,label,hint,extra) => Object.assign({t:"check",f,s,k,d,label,hint}, extra||{});
+const N = (f,s,k,d,label,hint,extra) => Object.assign({t:"num",f,s,k,d,label,hint}, extra||{});
+const SEL = (f,s,k,d,label,opts,hint,extra) => Object.assign({t:"select",f,s,k,d,label,opts,hint}, extra||{});
+const T = (f,s,k,d,label,hint,extra) => Object.assign({t:"text",f,s,k,d,label,hint}, extra||{});
+const FILE = (f,s,k,label,ext,hint,startDir) => ({t:"file",f,s,k,d:"",label,ext,hint,startDir});
+const FONT = (f,s,k,d,label,hint) => ({t:"font",f,s,k,d,label,hint});
+const WAV = (f,s,k,d,label) => SEL(f,s,k,d,label,()=> (S.wavs||[]).map(w => { const n = w.replace(/^snd\\/i,""); return [n, n]; }));
+const is2000 = () => S && S.exe == "2000";
+
+/* ---------- paths and the folder browser ---------- */
+function toGame(abs){
+  const g = S.dir.replace(/\/+$/,"");
+  if (abs.toLowerCase().startsWith(g.toLowerCase() + "/")) return abs.slice(g.length + 1).replace(/\//g,"\\");
+  return "Z:" + abs.replace(/\//g,"\\");
+}
+function fromGame(v){
+  if (!v) return "";
+  if (/^z:/i.test(v)) return v.slice(2).replace(/\\/g,"/");
+  return S.dir + "/" + v.replace(/\\/g,"/");
+}
+async function browse(opt, done){
+  const ext = opt.ext || ".dat";
+  const m = el("div",{class:"modal"}); const box = el("div",{class:"box"}); m.append(box); document.body.append(m);
+  const close = () => { m.remove(); window.removeEventListener("keydown", esc); };
+  function esc(e){ if (e.key=="Escape") close(); }
+  window.addEventListener("keydown", esc);
+  m.addEventListener("click", e => { if (e.target == m) close(); });
+  const show = async (path) => {
+    const j = await (await api("/api/ls?p=" + encodeURIComponent(path) + "&e=" + encodeURIComponent(ext))).json();
+    box.innerHTML = "";
+    const up = el("button",{class:"btn small"}, "⬆ " + L("Acima")); up.addEventListener("click", () => show(j.path.replace(/\/[^\/]+$/,"") || "/"));
+    const gm = el("button",{class:"btn small"}, L("Pasta do jogo")); gm.addEventListener("click", () => show(j.game));
+    const hm = el("button",{class:"btn small"}, L("Pasta pessoal")); hm.addEventListener("click", () => show(j.home));
+    box.append(el("div",{class:"top"}, up, gm, hm, el("div",{class:"path"}, (opt.title ? L(opt.title) + " (" + ext.replace(/,/g," ") + ") · " : "") + j.path)));
+    const list = el("div",{class:"list"});
+    for (const d of j.dirs){ const b = el("button",{class:"it"}, "📁 " + d); b.addEventListener("click", () => show(j.path.replace(/\/$/,"") + "/" + d)); list.append(b); }
+    for (const f of j.files){ const b = el("button",{class:"it dat"}, "📄 " + f); if (opt.dir) b.disabled = true; else b.addEventListener("click", () => { close(); done(toGame(j.path.replace(/\/$/,"") + "/" + f)); }); list.append(b); }
+    if (!j.dirs.length && !j.files.length) list.append(el("div",{class:"empty", style:"padding:10px"}, L("Pasta vazia.")));
+    box.append(list);
+    const cancel = el("button",{class:"btn"}, L("Cancelar")); cancel.addEventListener("click", close);
+    const bot = el("div",{class:"bot", style:"gap:8px"});
+    if (opt.dir){ const use = el("button",{class:"btn primary"}, L("Usar esta pasta")); use.addEventListener("click", () => { close(); done(toGame(j.path), j); }); bot.append(use); }
+    bot.append(cancel); box.append(bot);
+  };
+  await show(opt.start || S.dir);
+}
+
+/* ---------- tabs ---------- */
+const MODS = [["gpxset","GPxSet","temporadas, carros, física, chuva, corrida rápida"],["gpxtrack","GPxTrack","pistas da comunidade e limites estendidos"],["gpxlap","GPxLap","tempos (ATL), log, acerto no carro, quicksave"],["gpxsat","GPxSAT","gráficos de TV"],["gpxcinfo","GPxCInfo","painéis de informação do carro"],["gpxsound","GPxSound","sons 3D do motor e do box"],["gpxivibe","intelliVIBE","vibração (hardware antigo)"]];
+
+const TABS = [
+ {id:"gpx", name:"GPxPatch", build(){
+   const P = "gpxpatch.ini", R = "gp3rt.ini";
+   const out = [];
+   if (!S.shortcuts){
+     const b = el("button",{class:"btn primary small"}, L("Criar atalhos"));
+     b.addEventListener("click", async () => { b.disabled = true; const j = await (await api("/api/shortcuts", "")).json(); status(j.ok ? L("Atalhos criados no menu de aplicativos e na área de trabalho.") : L("Não foi possível criar os atalhos.")); await reload(); });
+     out.push(el("div",{class:"banner"}, el("span",{}, L("Crie os atalhos “{0}” e “GPxPatch” no menu de aplicativos e na área de trabalho, para abrir o jogo com dois cliques.", gameName())), b));
+   }
+   out.push(
+    group("Ao abrir o jogo", [
+      B(R,"game","gpxpatch",1,"O atalho do jogo inicia com o GPxPatch","Os botões lá embaixo escolhem só para esta vez."),
+      B(R,"game","intro_videos",1,"Pular introdução","Os vídeos de abertura (Esc também pula).",{inv:true}),
+      B(P,"Misc","SkipStartupMenu",0,"Pular o menu inicial","Vai direto ao menu principal."),
+      B(P,"Misc","SkipWeatherMenu",0,"Pular o menu de clima","Útil na corrida rápida."),
+    ]),
+    group("Extensões ativadas", MODS.map(([k,l,h]) => B(P,"Mod",k, k=="gpxivibe"?0:1, l, h))),
+    group("Jogo", [
+      SEL(P,"Misc","ExtendedPause",0,"Modo de pausa estendido",[["0","Desligado"],["1","Ligado"],["2","Ligado depois de apertar Enter na pausa"]],"Na pausa dá para trocar de câmera e usar as teclas do GPx."),
+      T(P,"Misc","HostIPAddress","","Endereço IP do host (multiplayer)","Vazio = procura na rede local.",{ph:"ex.: 200.150.10.20"}),
+    ]),
+    group("Debug", [
+      B(R,"game","skip_asserts",1,"Iniciar em modo debug","Ignora as verificações internas do GP3, como o modo debug do GPxPatch: necessário para pistas que “só funcionam em modo debug”."),
+      SEL(P,"Debug","Verbose",0,"Detalhes do registro (gpxpdata/log)",[["0","Normal"],["1","Detalhado"],["2","Muito detalhado"]]),
+    ]),
+   );
+   return out;
+ }},
+ {id:"set", name:"GPxSet", build(){
+   const F = "gpxset.ini";
+   const skies = () => { const l = (S.skies||[]).slice().sort(); if (!l.includes("skya")) l.unshift("skya"); return l.map(x => [x, x]); };
+   const tarmacs = () => { const l = (S.tarmacs||[]).slice(); if (!l.some(x => x.toLowerCase()=="tarmacmap.bmp")) l.unshift("tarmacmap.bmp"); return l.map(x => [x, x]); };
+   return [
+    is2000() ? group("Temporada", [
+      B(F,"SeasonManager","Enable",0,"Usar temporada (season set)","Pinturas, cockpits, capacetes, mecânicos, pneus, pontos e pistas da temporada. Configure nas abas “Temporada” e “Carset”."),
+    ]) : null,
+    group("Carros", [
+      B(F,"Misc","TeamPower",0,"Força do carro dependendo da equipe","O seu carro fica com a mesma performance do carro do computador da equipe."),
+      SEL(F,"Misc","TeamPowerType",3,"Como a força é aplicada",[["0","Comportamento antigo"],["1","Só potência"],["2","Só aderência"],["3","Potência e aderência"]],"“Potência e aderência” é o recomendado para arquivos de performance novos."),
+      B(F,"PerfManager","Enable",0,"Usar arquivo de performance"),
+      FILE(F,"PerfManager","Path","Arquivo de performance",".txt","Arquivo .txt feito com o GP3Ed / TeamEditor."),
+      B(F,"CarshapeManager","Enable",0,"Usar carshape"),
+      FILE(F,"CarshapeManager","Carshape","Arquivo de carshape",".cs3","Arquivo .cs3 feito com o editor de carros do Paul Hoad."),
+      B(F,"PhysicsManager","Enable",0,"Usar física personalizada"),
+      FILE(F,"PhysicsManager","Path","Arquivo de física",".g3p","Arquivo .g3p do GP3 Advanced Physics Editor.","gpxpdata"),
+      FILE(F,"PhysicsManager","TorquePath","Arquivo de torque",".ini","Arquivo .ini exportado pelo Torque Editor.","gpxpdata"),
+    ]),
+    group("Gráficos", [
+      SEL(F,"Misc","skya","skya","Prefixo das imagens do céu",skies,"Imagens skyaNN.bmp em gp3jamsh\\techjam (troca entre céu de dia e de noite)."),
+      SEL(F,"Misc","tarmac","tarmacmap.bmp","Bitmap do asfalto",tarmacs,"Em gp3jamsh\\techjam."),
+      is2000() ? B(F,"Misc","DisableProgressBar",0,"Desabilitar a barra de progressão") : null,
+    ]),
+    group("Sessões", [
+      N(F,"Misc","QuickraceLength",5,"Tamanho da corrida rápida","% da distância real.",{min:1,max:100,unit:"%"}),
+      N(F,"Misc","FreePracticeCars",1,"Carros no treino livre",null,{min:1,max:22}),
+      N(F,"Misc","ConsecutiveCars",13,"Carros do computador na pista ao mesmo tempo","Nas sessões que não são corrida.",{min:1,max:22}),
+      N(F,"Misc","RainChance",50,"Probabilidade de chuva","Quando o clima é aleatório.",{min:0,max:100,unit:"%"}),
+    ]),
+   ];
+ }},
+ {id:"season", name:"Temporada", only2000:true, build: buildSeason},
+ {id:"carset", name:"Carset", only2000:true, build: buildCarset},
+ {id:"track", name:"GPxTrack", build: buildTrack},
+ {id:"lap", name:"GPxLap", build(){
+   const F = "gpxlap.ini";
+   return [
+    group("Geral", [
+      B(F,"Authentication","Enable",1,"Habilitar autenticação","Marca os tempos de volta para provar que não houve trapaça."),
+      B(F,"Setup","Enable",0,"Mudanças de acerto dentro do carro","Tecla L (acerto no box: \\ [ ])."),
+      B(F,"SaveRestore","Enable",0,"Salvar/restaurar o estado do carro","Backspace."),
+      B(F,"Quicksave","Auto",0,"Autosave"),
+      B(F,"Misc","BestSplit",0,"Mostrar a melhor parcial na qualificação"),
+      B(F,"Misc","PitExtView",0,"Visão externa no pitlane"),
+      B(F,"Misc","FixPitstopBug",0,"Corrigir o bug do pit stop"),
+      B(F,"Misc","HideReplayMenu",0,"Esconder o menu de replay"),
+      N(F,"Misc","RaceOverDuration",6,"Tempo da tela de fim de corrida",null,{min:0,max:60,unit:"s"}),
+    ]),
+    group("Tabela de tempos (ATL, tecla 9)", [
+      FONT(F,"ATL","Font","ATL2004","Fonte"),
+      {t:"color",f:F,s:"ATL",k:"PanelColor",d:"0x00000000",label:"Cor do painel"},
+      N(F,"ATL","NumFastestCars",3,"Carros mais rápidos destacados",null,{min:0,max:22}),
+    ]),
+    group("Log (tecla 2)", [
+      FONT(F,"Log","Font","courier","Fonte"),
+      N(F,"Log","PanelSize",14,"Linhas do painel",null,{min:1,max:60}),
+      N(F,"Log","PanelAlpha",112,"Transparência do painel","0 = invisível, 255 = opaco.",{min:0,max:255}),
+    ]),
+    group("Acerto (tecla L)", [
+      N(F,"Setup","DisplayDuration",3000,"Tempo na tela",null,{min:0,max:60000,step:100,unit:"ms"}),
+      B(F,"Setup","ShowWear",1,"Mostrar desgaste"),
+      B(F,"Setup","ShowWearInQualify",0,"Mostrar desgaste na qualificação"),
+      B(F,"Setup","ShowWearInRace",0,"Mostrar desgaste na corrida"),
+    ]),
+    group("Registro de voltas", [
+      B(F,"LapLog","Enable",0,"Registro de texto das voltas"),
+      T(F,"LapLog","Path","laps.log","Arquivo"),
+      B(F,"LapLog","Append",0,"Adicionar ao arquivo"),
+    ]),
+    group("Temperatura do motor", [
+      N(F,"EngineTemperature","Start",93,"Inicial",null,{unit:"°C"}),
+      N(F,"EngineTemperature","IdleLow",24,"Parado (mínima)",null,{unit:"°C"}),
+      N(F,"EngineTemperature","IdleHigh",93,"Parado (máxima)",null,{unit:"°C"}),
+      N(F,"EngineTemperature","Maximum",125,"Máxima",null,{unit:"°C"}),
+      N(F,"EngineTemperature","ChangeSpeed",16,"Velocidade de mudança"),
+    ]),
+    group("Distância RCR", [
+      N(F,"RCR","DistCockpit",3840,"Cockpit"), N(F,"RCR","DistOnBoard",3840,"Câmera de bordo"),
+      N(F,"RCR","DistChase",7680,"Câmera de perseguição"), N(F,"RCR","DistTrack",7680,"Câmera da pista"),
+    ]),
+   ];
+ }},
+ {id:"sat", name:"GPxSAT", build(){
+   const F = "gpxsat.ini";
+   const modes = [["0","Clássico"],["1","Digital"],["2","Digital 2004"],["3","Digital 2010"]];
+   return [
+    group("Gráficos de TV", [
+      SEL(F,"Misc","Mode",3,"Modalidade",modes),
+      B(F,"Misc","ShowInCockpit",0,"Mostrar no cockpit","Sem isso os gráficos só aparecem nas câmeras externas."),
+      B(F,"Misc","ShowMicroTime",0,"Microtime ligado ao iniciar","Tecla M."),
+      N(F,"Misc","SpeedTrapWidth",50,"Tempo das informações de parcial na tela","Quanto antes e depois de cada ponto (50 a 100).",{min:0,max:300}),
+    ]),
+    group("Substituir as mensagens no céu", [
+      B(F,"Misc","ReplaceSkyMessagesWhenShowInCockpitIsOff",0,"Substituir também quando “Mostrar no cockpit” está desligado"),
+      B(F,"Sky","ReplaceFastestLap",1,"Volta mais rápida"),
+      B(F,"Sky","ReplaceOutOfRace",1,"Fora da corrida"),
+      B(F,"Sky","ReplaceIsInPits",1,"Nos boxes"),
+      B(F,"Sky","ReplaceHasWonRace",1,"Corrida vencida"),
+      B(F,"Sky","ReplaceRidingWith",1,"Pilotando com"),
+      B(F,"Sky","ReplaceBlackFlag",1,"Bandeira preta"),
+    ]),
+    group("Microtime", [
+      N(F,"MicroTime","PosX",10,"Posição X",null,{min:0,max:4000,unit:"px"}),
+      N(F,"MicroTime","PosY",10,"Posição Y",null,{min:0,max:4000,unit:"px"}),
+    ]),
+    group("Fontes", [
+      FONT(F,"Font","FontClassic","manana","Clássico"),
+      FONT(F,"Font","FontDigital","futura","Digital"),
+      FONT(F,"Font","FontDigital2004","digital2004","Digital 2004"),
+      FONT(F,"Font","FontDigital2010","din-bold","Digital 2010"),
+      FONT(F,"Font","Font2D","courier","Textos 2D"),
+    ]),
+    group("Carros por página na classificação", [
+      N(F,"Classic","CarsPerPage",8,"Clássico",null,{min:1,max:22}),
+      N(F,"Digital","CarsPerPage",6,"Digital",null,{min:1,max:22}),
+      N(F,"Digital2004","CarsPerPage",8,"Digital 2004",null,{min:1,max:22}),
+      N(F,"Digital2010","CarsPerPage",5,"Digital 2010",null,{min:1,max:22}),
+    ]),
+    group("Mapa da pista (tecla 8)", [
+      B(F,"TrackMap","Enable",1,"Mapa da pista"),
+      N(F,"TrackMap","TrackMapSize",256,"Tamanho","Em 1024x768; ajustado para a resolução.",{min:64,max:1024,unit:"px"}),
+      N(F,"TrackMap","TrackMapPosX",0,"Posição X",null,{min:0,max:4000,unit:"px"}),
+      N(F,"TrackMap","TrackMapPosY",0,"Posição Y",null,{min:0,max:4000,unit:"px"}),
+      B(F,"TrackMap","ShowCars",1,"Mostrar os carros"),
+      B(F,"TrackMap","ShowCCs",1,"Mostrar os carros do computador"),
+      B(F,"TrackMap","ShowYellowZones",1,"Mostrar as zonas de bandeira amarela"),
+      B(F,"TrackMap","AutoShowEnabled",1,"Aparecer sozinho com bandeira amarela"),
+      B(F,"TrackMap","TrackMapBackground",0,"Fundo semitransparente"),
+    ]),
+   ];
+ }},
+ {id:"cinfo", name:"GPxCInfo", build: buildCInfo},
+ {id:"sound", name:"GPxSound", build(){
+   const F = "gpxsound.ini";
+   return [
+    group("Som 3D do motor dos outros carros", [
+      B(F,"Engine","Enabled",1,"Ativar som 3D do motor"),
+      B(F,"Engine","DisableGPxSound3D",1,"Desabilitar o falso som 3D do GPx"),
+      WAV(F,"Engine","Wave","engine.wav","Arquivo .wav do motor"),
+      N(F,"Engine","MinDistance",4,"Distância mínima",null,{min:0,max:1000,step:0.5,unit:"m",float:true}),
+      N(F,"Engine","MaxDistance",200,"Distância máxima",null,{min:1,max:10000,step:1,unit:"m",float:true}),
+      N(F,"Engine","Revs2PitchFactor",1.2,"Frequência: fator por RPM",null,{step:0.05}),
+      N(F,"Engine","Revs2PitchOffset",4000,"Frequência: soma",null,{unit:"Hz"}),
+      N(F,"Engine","Revs2VolumeFactor",0.2,"Volume: fator por RPM",null,{step:0.05}),
+      N(F,"Engine","Revs2VolumeOffset",-2000,"Volume: soma",null,{unit:"1/100 dB"}),
+    ]),
+    group("Sirene do box", [
+      B(F,"Siren","Enabled",1,"Ativar som 3D da sirene do box"),
+      WAV(F,"Siren","Wave","pithorn.wav","Arquivo .wav da sirene"),
+      N(F,"Siren","MinDistance",5,"Distância mínima",null,{min:0,max:1000,step:0.5,unit:"m",float:true}),
+      N(F,"Siren","MaxDistance",500,"Distância máxima",null,{min:1,max:10000,unit:"m",float:true}),
+    ]),
+    group("Sons de eventos", [
+      B(F,"EventSound","Enabled",1,"Ativar os sons 2D de eventos"),
+      N(F,"EventSound","Volume",0,"Volume geral",null,{min:-10000,max:0,step:100,unit:"1/100 dB"}),
+      T(F,"EventSound","SoundSet","soundset.ini","Arquivo de eventos (em gpxpdata/snd)"),
+    ]),
+    group("Avançado", [
+      N(F,"Listener","DistanceFactor",1,"Fator de distância",null,{step:0.1,float:true}),
+      N(F,"Listener","RolloffFactor",1,"Fator de atenuação",null,{step:0.1,float:true}),
+      N(F,"Listener","DopplerFactor",1,"Fator Doppler",null,{step:0.1,float:true}),
+    ]),
+   ];
+ }},
+ {sep:true},
+ {id:"keys", name:"Teclas", build: buildKeys},
+ {id:"fonts", name:"Fontes", build: buildFonts},
+ {sep:true},
+ {id:"gp3rt", name:"Vídeo e jogo (GP3RT)", build(){
+   const R = "gp3rt.ini";
+   return [
+    group("Vídeo", [
+      SEL(R,"video","mode","fullscreen","Tela",[["fullscreen","Tela cheia"],["window","Janela"]],"Alt+Enter alterna durante o jogo."),
+      SEL(R,"video","window_scale","1","Tamanho da janela",[["1","640x480"],["2","1280x960"],["3","1920x1440"]]),
+      SEL(R,"video","gpu","auto","Placa de vídeo",[["auto","Automático (dedicada se houver duas)"],["dedicated","Sempre a dedicada"],["integrated","Sempre a integrada"],["system","Não mexer"]]),
+      SEL(R,"video","internal_scale","auto","Resolução interna do 3D",[["auto","Automático"],["1","1x (original)"],["2","2x"],["3","3x"],["4","4x"]]),
+      SEL(R,"video","anisotropy","auto","Filtragem anisotrópica",[["auto","Automático"],["0","Desligada"],["2","2x"],["4","4x"],["8","8x"],["16","16x"]]),
+      B(R,"video","force_filtering",1,"Filtragem bilinear nas texturas"),
+      B(R,"video","vsync",1,"Sincronizar com o monitor (vsync)"),
+      N(R,"video","spray_opacity",60,"Opacidade do spray e da fumaça","100 = original do GP3.",{min:0,max:100,unit:"%"}),
+    ]),
+    group("Widescreen", [
+      N(R,"video","wide_width",-1,"Largura","-1 = do monitor; 0 = desligado. Escolha 1280x1024 no menu do jogo.",{min:-1,max:7680}),
+      N(R,"video","wide_height",-1,"Altura",null,{min:-1,max:4320}),
+      B(R,"video","hor_plus",1,"Campo de visão Hor+","Mais imagem dos lados, sem esticar."),
+      N(R,"video","fov_percent",100,"Ajuste do campo de visão",null,{min:50,max:200,unit:"%"}),
+    ]),
+    group("Jogo", [
+      SEL(R,"game","numpad_keys","0","Teclado numérico",[["0","Segue o NumLock (como no Windows)"],["1","Sempre Home/End/PgUp/PgDn"],["2","Sempre números"]]),
+      B(R,"game","sound3d",1,"Som 3D (DirectSound3D)","Usado pelo GP3 2000 e pelo GPxSound."),
+    ]),
+    group("Replay", [
+      B(R,"game","replay_keys",1,"Teclas do replay do GP3 2000 (GP3 1.13)","F1 a F9 no replay: voltas, pausa, câmera lenta, voltar e avançar. Shift+F1: largada; Shift+F2: fim."),
+      B(R,"game","replay_legend",1,"Legenda das teclas no replay","Mostra F1 a F9 embaixo da tela."),
+      B(R,"game","replay_fx_fix",1,"Spray e fumaça no replay (GP3 1.13)","Não somem mais depois de voltar o replay."),
+      B(R,"game","gp3replay",1,"Replay da corrida inteira (GP3 1.13)","Carrega o GP3Replay.dll quando ele está na pasta do jogo."),
+      B(R,"game","replay_2h",1,"Replay de 2 horas (GP3 2000)","Length of replay até 2:00:00."),
+    ]),
+   ];
+ }},
+];
+function gameName(){ return is2000() ? "Grand Prix 3 2000" : "Grand Prix 3"; }
+
+/* ---------- GPxTrack ---------- */
+const SLOTS_113 = ["Austrália","Brasil","Argentina","San Marino","Espanha","Mônaco","Canadá","França","Grã-Bretanha","Áustria","Alemanha","Hungria","Bélgica","Itália","Luxemburgo","Japão"];
+const SLOTS_2000 = ["Austrália","Brasil","San Marino","Grã-Bretanha","Espanha","Europa","Mônaco","Canadá","França","Áustria","Alemanha","Hungria","Bélgica","Itália","EUA","Japão","Malásia"];
+function buildTrack(){
+  const F = "gpxtrack.ini";
+  const SET = get(F,"TrackManager","TrackSet","tracks.set") || "tracks.set";
+  if (!INI[SET]) INI[SET] = parseIni(S.files.trackset_text);
+  /* the track sets: one .set file per season / category */
+  const sets = (S.sets||[]).slice(); if (!sets.some(s => s.toLowerCase()==SET.toLowerCase())) sets.unshift(SET);
+  const sel = el("select",{class:"wide"});
+  for (const s of sets){ const o = el("option",{value:s}, s); if (s.toLowerCase()==SET.toLowerCase()) o.selected = true; sel.append(o); }
+  sel.addEventListener("change", async () => { put(F,"TrackManager","TrackSet", sel.value); await flush(); await reload(); });
+  const neu = el("button",{class:"btn small"}, L("Salvar como novo…"));
+  neu.addEventListener("click", async () => {
+    let n = prompt(L("Nome do novo conjunto de pistas (ex.: temporada1998):"), ""); if (!n) return;
+    n = n.trim().replace(/[\\\/:*?"<>|\t]/g,"").replace(/\.set$/i,""); if (!n) return;
+    await flush();
+    const j = await (await api("/api/copyset", SET + "\t" + n + ".set")).json();
+    if (!j.ok){ status(L("Já existe um conjunto com esse nome.")); return; }
+    put(F,"TrackManager","TrackSet", n + ".set"); await flush(); await reload();
+    status(L("Conjunto “{0}” criado. As mudanças agora vão para ele.", n + ".set"));
+  });
+  const setGroup = group("Conjunto de pistas", [row("Conjunto em uso", "Arquivos .set da pasta gpxpdata: um para cada temporada ou categoria.", el("div",{class:"setbar"}, sel, neu))]);
+
+  const names = is2000() ? SLOTS_2000 : SLOTS_113;
+  const dats = (S.dats||[]).slice().sort((a,b)=>a.localeCompare(b));
+  const slots = el("div");
+  function enable(){ if (!has(F,"TrackManager","TrackSet")) put(F,"TrackManager","TrackSet",SET); }
+  names.forEach((nm, i) => {
+    const key = "f1ct" + String(i+1).padStart(2,"0");
+    const cur = get(SET,"TrackFiles",key,"");
+    const s = el("select");
+    s.append(el("option",{value:""}, L("(pista original)")));
+    let found = !cur;
+    for (const d of dats){ const o = el("option",{value:d}, d); if (d.toLowerCase()==cur.toLowerCase()){ o.selected = true; found = true; } s.append(o); }
+    if (!found){ const o = el("option",{value:cur}, cur); o.selected = true; s.append(o); }
+    s.addEventListener("change", () => { put(SET,"TrackFiles",key, s.value || DEL); enable(); });
+    const br = el("button",{class:"btn small", title:L("Escolher um .dat em qualquer pasta")}, L("Procurar…"));
+    br.addEventListener("click", () => browse({ext:".dat", start: s.value ? fromGame(s.value).replace(/\/[^\/]*$/,"") : S.dir, title:"Pista"}, (v) => {
+      if (![...s.options].some(o => o.value == v)) s.append(el("option",{value:v}, v));
+      s.value = v; put(SET,"TrackFiles",key, v); enable();
+    }));
+    slots.append(el("div",{class:"slot"}, el("span",{class:"n"}, String(i+1).padStart(2,"0")), el("span",{}, L(nm)), s, br));
+  });
+  const warn = [];
+  const inis = S.circuit_inis || [];
+  if (inis.length == 1) warn.push(notice(L("A pasta circuits tem um único arquivo .ini ({0}). O GPx usa esse .ini para todas as pistas modificadas dessa pasta, e por isso várias etapas aparecem com o mesmo nome. Deixe cada pista da comunidade (.dat, .ini e arquivos dela) numa pasta própria, por exemplo “pistas\\Donington”, e escolha o .dat aqui com “Procurar…”.", inis[0])));
+  return [...warn, setGroup,
+    group(L("Seleção de pistas ({0})", SET), [slots], "Escolha o arquivo .dat de cada etapa: na lista (os .dat da pasta do jogo) ou com “Procurar…”, em qualquer pasta do computador. O nome e o país vêm do .ini que fica junto do .dat."),
+    group("Limites estendidos", [
+      SEL(F,"Misc","ExtendTrackLength","0","Comprimento máximo da pista",[["0","8 km (original)"],["1","10 km"],["2","20 km"]],"Use o menor valor que suas pistas precisam."),
+      SEL(F,"Misc","ExtendMaxRaceLaps","0","Voltas máximas na corrida",[["0","99 (original)"],["1","125"],["2","253"]]),
+    ]),
+    group("Menus", [
+      B(F,"TrackManager","CatchMenuStrings",1,"Mostrar nos menus o nome, país e recordes das pistas"),
+      B(F,"TrackManager","CatchRecords",0,"Capturar recordes","Sobrescreve recordes antigos do mesmo slot."),
+    ]),
+    is2000() ? group("Temporada", [
+      B(F,"TrackManager","IgnoreCarSet",0,"Ignorar as pistas da temporada e dos carsets","Normalmente a pista escolhida num carset (ou o conjunto de pistas da temporada) tem prioridade sobre esta aba."),
+    ]) : null,
+  ];
+}
+
+
+/* ---------- GP3 2000: season sets and car sets ---------- */
+const TEAMS_2000 = ["McLaren","Ferrari","Jordan","Jaguar","Williams","Benetton","Prost","Sauber","Arrows","Minardi","BAR"];
+const ROOTS = {
+  liv:  {re:/^gp3jamsh?\\liveries\\/i, alts:v=>["gp3jams\\liveries\\"+v,"gp3jamsh\\liveries\\"+v], start:"gp3jamsh/liveries", where:"gp3jams\\liveries / gp3jamsh\\liveries"},
+  main: {re:/^gp3jamsh?\\main\\/i, alts:v=>["gp3jams\\main\\"+v,"gp3jamsh\\main\\"+v], start:"gp3jamsh/main", where:"gp3jams\\main / gp3jamsh\\main"},
+  jams: {re:/^gp3jamsh?\\/i, alts:v=>["gp3jams\\"+v,"gp3jamsh\\"+v], start:"gp3jams/genjam", where:"gp3jams"},
+  tech: {re:/^gp3jamsh\\techjam\\(?=[^\\]+$)/i, alts:v=>["gp3jamsh\\techjam\\"+v], start:"gp3jamsh/techjam", where:"gp3jamsh\\techjam"},
+  game: {re:null, alts:v=>[v], start:"", where:""},
+};
+const natural = (a,b) => a.localeCompare(b, undefined, {numeric:true, sensitivity:"base"});
+const JAM = (f,s,k,label,root,ext,hint) => ({t:"jam",f,s,k,label,root,ext:ext||".jam",hint});
+let CS_EDIT = null;            // car set shown in the Carset tab
+const UTF8 = {};               // .set files saved as UTF-8 (GPxPatch on Windows expects Windows-1252)
+function utf8Notice(n){
+  if (!UTF8[n]) return null;
+  const b = el("button",{class:"btn small"}, L("Converter para Latin-1"));
+  b.addEventListener("click", async () => {
+    await flush();
+    const j = await (await api("/api/tolatin1", n)).json();
+    if (j.ok){ delete INI[n]; delete UTF8[n]; await preloadSeason(); render(); status(L("{0} convertido para Latin-1.", n)); }
+    else status(L("Não foi possível converter {0}.", n));
+  });
+  return el("div",{class:"notice"}, L("{0} está gravado em UTF-8. No Linux o GP3RT entende os acentos (ç, ã, é) mesmo assim, mas o GPxPatch do Windows só entende Latin-1 (Windows-1252). ", n), b);
+}
+const PERF = {};               // performance file -> {teams:[{name,d1,d2}]}
+
+function seasonName(){ return get("gpxset.ini","SeasonManager","SeasonSet","season.set") || "season.set"; }
+function carsetName(){
+  if (CS_EDIT) return CS_EDIT;
+  const c = INI[seasonName()] ? get(seasonName(),"CarSets","CarSet","") : "";
+  return c || (S.carsets||[])[0] || "";
+}
+async function ensureFile(n){
+  if (!n || INI[n]) return;
+  try{ const j = await (await api("/api/file?n=" + encodeURIComponent(n))).json(); INI[n] = parseIni(j.text); if (j.utf8) UTF8[n] = 1; else delete UTF8[n]; }catch(e){ INI[n] = {}; }
+}
+function parsePerf(t){
+  const teams = [];
+  for (const [k, sec] of Object.entries(parseIni(t))){
+    const m = /^team #(\d+)$/.exec(k); if (!m) continue;
+    const d = (key) => { const e = sec.keys[key]; if (!e) return ""; const p = e.v.split(","); return (p[1]||"").trim(); };
+    teams[+m[1]] = {name: (sec.keys["name"]||{v:""}).v, d1:d("first driver"), d2:d("second driver")};
+  }
+  return {teams};
+}
+async function ensurePerf(path){
+  if (!path || PERF[path] !== undefined) return;
+  PERF[path] = null;
+  try{ const t = await (await api("/api/gametext?p=" + encodeURIComponent(path))).json(); PERF[path] = t ? parsePerf(t) : null; }catch(e){}
+}
+async function preloadSeason(){
+  if (!S || !S.gpx || !is2000()) return;
+  await ensureFile(seasonName());
+  const cs = carsetName(); await ensureFile(cs);
+  if (cs && get(cs,"Performance","Enable","0") != "0") await ensurePerf(get(cs,"Performance","Path",""));
+}
+function teamInfo(cs, t){
+  const P = cs ? PERF[get(cs,"Performance","Path","")] : null; const x = P && P.teams[t];
+  const n = String(t+1).padStart(2,"0");
+  if (x && x.name) return {name: L("Equipe {0}", n) + " · " + x.name, sub: [x.d1, x.d2].filter(Boolean).join(" / ")};
+  return {name: L("Equipe {0}", n), sub: L("{0} no jogo original", TEAMS_2000[t])};
+}
+function jamBox(o, compact){
+  const R = ROOTS[o.root];
+  const cur = get(o.f, o.s, o.k, "");
+  const i = el("input",{type:"text", placeholder: compact ? "" : L("nenhum arquivo")}); i.value = cur; i.title = cur;
+  const mark = v => { i.dataset.alts = v ? R.alts(v).join("|") : ""; i.classList.remove("missing"); };
+  mark(cur);
+  const commit = v => { i.value = v; i.title = v; put(o.f, o.s, o.k, v === "" ? DEL : v); mark(v); checkFiles(); };
+  i.addEventListener("change", () => commit(i.value.trim()));
+  const b = el("button",{class:"btn small", title:L("Procurar…")}, compact ? "…" : L("Procurar…"));
+  b.addEventListener("click", () => {
+    const v = i.value.trim(); const a = v ? R.alts(v) : null;
+    const start = a ? fromGame(a[a.length-1]).replace(/\/[^\/]*$/,"") : S.dir + "/" + R.start;
+    browse({ext:o.ext, start, title:o.label}, w => {
+      if (o.root == "game") return commit(w);
+      if (/^z:/i.test(w) || !R.re.test(w)){ status(L("Escolha um arquivo dentro de {0}.", R.where)); return; }
+      commit(w.replace(R.re, ""));
+    });
+  });
+  return el("div",{class: compact ? "jampick" : "filepick"}, i, b);
+}
+/* fill a list of slots with the files of one folder, in natural order (car1, car1a, car2, …) */
+function fillButton(slots, root, ext){
+  const R = ROOTS[root];
+  const b = el("button",{class:"btn small"}, L("Preencher com uma pasta…"));
+  b.addEventListener("click", () => browse({ext, dir:true, start: S.dir + "/" + R.start, title:"Pasta"}, async (w, j) => {
+    if (/^z:/i.test(w) || !R.re.test(w + "\\")){ status(L("Escolha uma pasta dentro de {0}.", R.where)); return; }
+    const rel = (w + "\\").replace(R.re, "");
+    const files = j.files.slice().sort(natural);
+    if (!files.length){ status(L("Nenhum arquivo {0} nessa pasta.", ext)); return; }
+    slots.forEach((sl, n) => { if (files[n]) put(sl.f, sl.s, sl.k, rel + files[n]); });
+    status(files.length == slots.length ? L("{0} arquivos atribuídos, em ordem.", files.length)
+                                        : L("A pasta tem {0} arquivos para {1} posições: confira a ordem.", files.length, slots.length));
+    render();
+  }));
+  return b;
+}
+/* team rows x columns of jam pickers */
+function jamGrid(cs, sec, cols, keyOf, root){
+  const tb = el("table",{class:"grid"});
+  const hr = el("tr",{}, el("th",{class:"t"}, ""));
+  for (const c of cols) hr.append(el("th",{}, L(c)));
+  tb.append(hr);
+  const slots = [];
+  for (let t = 0; t < 11; t++){
+    const ti = teamInfo(cs, t);
+    const tr = el("tr",{}, el("td",{class:"t"}, el("b",{title:ti.name}, ti.name), el("span",{title:ti.sub}, ti.sub)));
+    cols.forEach((c, n) => { const k = keyOf(t, n); slots.push({f:cs, s:sec, k}); tr.append(el("td",{}, jamBox({f:cs, s:sec, k, label:L(c), root, ext:".jam"}, true))); });
+    tb.append(tr);
+  }
+  return {table: tb, slots};
+}
+/* select one of the .set files + new / duplicate */
+function setPicker(cur, list, onPick, kind){
+  const sel = el("select",{class:"wide"});
+  const all = list.slice(); if (cur && !all.some(x => x.toLowerCase()==cur.toLowerCase())) all.unshift(cur);
+  if (!all.length) sel.append(el("option",{value:""}, L("(nenhum)")));
+  for (const n of all){ const o = el("option",{value:n}, n); if (n.toLowerCase()==(cur||"").toLowerCase()) o.selected = true; sel.append(o); }
+  sel.addEventListener("change", () => onPick(sel.value));
+  const ask = (msg) => { let n = prompt(msg, ""); if (!n) return null; n = n.trim().replace(/[\\\/:*?"<>|\t\[\]=]/g,"").replace(/\.set$/i,""); return n ? n + ".set" : null; };
+  const exists = (n) => [...(S.sets||[]), ...(S.seasons||[]), ...(S.carsets||[])].some(x => x.toLowerCase()==n.toLowerCase());
+  const neu = el("button",{class:"btn small"}, L("Novo…"));
+  neu.addEventListener("click", async () => {
+    const n = ask(kind=="season" ? L("Nome da nova temporada (ex.: F1-1998):") : L("Nome do novo carset (ex.: F1-1998-carros):")); if (!n) return;
+    if (exists(n)){ status(L("Já existe um arquivo com esse nome.")); return; }
+    if (kind=="season"){ put(n,"CarSets","Enable",1); put(n,"CarSets","CarSet", carsetName()); put(n,"CarSets","EnableTrackSpecific",0); }
+    else { put(n,"Performance","Enable",0); put(n,"TeamPitOrder","Enable",0); }
+    await flush(); onPick(n, true);
+  });
+  const dup = el("button",{class:"btn small"}, L("Duplicar…"));
+  dup.addEventListener("click", async () => {
+    if (!cur) return;
+    const n = ask(L("Nome da cópia de {0}:", cur)); if (!n) return;
+    if (exists(n)){ status(L("Já existe um arquivo com esse nome.")); return; }
+    await flush();
+    const j = await (await api("/api/copyset", cur + "\t" + n)).json();
+    if (!j.ok){ status(L("Não foi possível copiar.")); return; }
+    onPick(n, true);
+  });
+  return el("div",{class:"setbar"}, sel, neu, cur ? dup : null);
+}
+async function pickSeason(n, created){
+  put("gpxset.ini","SeasonManager","SeasonSet", n); await flush();
+  if (created) await reload(); else { await preloadSeason(); render(); }
+}
+async function pickCarset(n, created){
+  CS_EDIT = n; if (created) await reload(); else { await preloadSeason(); render(); }
+}
+function buildSeason(){
+  const G = "gpxset.ini", F = seasonName();
+  const out = [];
+  if (get(G,"SeasonManager","Enable","0") == "0")
+    out.push(notice(L("A temporada está desligada: o jogo usa os carros originais. Ligue em “Usar temporada” abaixo.")));
+  out.push(group("Temporada em uso", [
+    B(G,"SeasonManager","Enable",0,"Usar temporada (season set)"),
+    row("Arquivo da temporada", "Arquivos .set da pasta gpxpdata com uma seção [CarSets].", setPicker(F, S.seasons||[], pickSeason, "season")),
+  ]));
+  if (!INI[F] || !Object.keys(INI[F]).length){
+    out.push(notice(L("O arquivo {0} não existe ou está vazio. Crie uma temporada com “Novo…”.", F)));
+    return out;
+  }
+  out.push(utf8Notice(F));
+  const carsets = [...(S.carsets||[]), ...(S.seasons||[])].sort(natural);
+  const csOpts = (empty) => () => [[ "", L(empty) ]].concat(carsets.map(c => [c, c]));
+  /* car sets per track */
+  const tr = el("div");
+  SLOTS_2000.forEach((nm, i) => {
+    const k = "CarSet" + String(i+1).padStart(2,"0");
+    const w = widget(SEL(F,"CarSets",k,"",L("{0}. {1}", String(i+1).padStart(2,"0"), L(nm)), csOpts("(o carset de todas as pistas)")));
+    tr.append(w);
+  });
+  const all = get(F,"CarSets","CarSet","");
+  const edit = el("button",{class:"btn small"}, L("Editar este carset"));
+  edit.addEventListener("click", async () => { CS_EDIT = get(F,"CarSets","CarSet","") || null; await preloadSeason(); render("carset"); });
+  out.push(group("Carset", [
+    B(F,"CarSets","Enable",1,"Usar os carsets desta temporada","Pinturas e cockpits dos 22 carros, capacetes, mecânicos, performance e ordem dos boxes."),
+    SEL(F,"CarSets","CarSet","","Carset de todas as pistas",csOpts("(nenhum)"),"Arquivo .set com as seções [Cars], [Cockpits]…"),
+    all ? row("", null, edit) : null,
+    B(F,"CarSets","DisableCarNrCopying",0,"Não copiar o número do 2º carro","Use quando cada pintura já tem o número certo pintado."),
+    B(F,"CarSets","EnableTrackSpecific",0,"Carset diferente por pista", "Pistas sem carset próprio usam o de todas as pistas.", {after: () => render()}),
+    get(F,"CarSets","EnableTrackSpecific","0") != "0" ? tr : null,
+  ]));
+  out.push(group("Arquivos da temporada", [
+    B(F,"TrackSet","Enable",0,"Conjunto de pistas da temporada","Usado quando o carset não escolhe a pista."),
+    SEL(F,"TrackSet","Path","","Conjunto de pistas",() => [["", L("(nenhum)")]].concat((S.sets||[]).map(x => [x, x])),"Os conjuntos da aba GPxTrack."),
+    B(F,"Carshape","Enable",0,"Carshape da temporada","O carshape da aba GPxSet tem prioridade."),
+    JAM(F,"Carshape","Carshape","Arquivo de carshape","game",".cs3"),
+    B(F,"Physics","Enable",0,"Física da temporada","A física da aba GPxSet tem prioridade."),
+    JAM(F,"Physics","Path","Arquivo de física","game",".g3p"),
+    JAM(F,"Physics","TorquePath","Arquivo de torque","game",".ini"),
+    B(F,"MenuGfx","Enable",0,"Gráficos do menu"),
+    JAM(F,"MenuGfx","Path","Arquivo dos gráficos do menu","game",".bin","Padrão: bitmaps\\gp2000v1.bin."),
+    B(F,"SATMode","Enable",0,"Modalidade dos gráficos de TV da temporada"),
+    SEL(F,"SATMode","Mode","0","Modalidade",[["0","Clássico"],["1","Digital"],["2","Digital 2004"],["3","Digital 2010"]]),
+  ]));
+  const teamsSel = [];
+  for (let t = 0; t < 11; t++)
+    teamsSel.push(SEL(F,"Tyres","Team" + String(t+1).padStart(2,"0"),"Jam01", teamInfo(carsetName(), t).name, [["Jam01","Tipo 1"],["Jam02","Tipo 2"]]));
+  out.push(group("Pneus", [
+    B(F,"Tyres","Enable",0,"Dois tipos de pneu","O GP3 2000 original tem um só."),
+    JAM(F,"Tyres","Jam01_01","Tipo 1: pneu (lento)","main",".jam","Em gp3jams\\main; no modo hardware precisa do .bmp de mesmo nome em gp3jamsh\\techjam."),
+    JAM(F,"Tyres","Jam01_02","Tipo 1: pneu (rápido, borrado)","main",".jam"),
+    JAM(F,"Tyres","Jam02_01","Tipo 2: pneu (lento)","main",".jam"),
+    JAM(F,"Tyres","Jam02_02","Tipo 2: pneu (rápido, borrado)","main",".jam"),
+    JAM(F,"Tyres","TreadArt01_01","Tipo 1: banda de chuva (lenta)","tech",".bmp"),
+    JAM(F,"Tyres","TreadArt01_02","Tipo 1: banda de chuva (rápida)","tech",".bmp"),
+    JAM(F,"Tyres","TreadArt02_01","Tipo 2: banda de chuva (lenta)","tech",".bmp"),
+    JAM(F,"Tyres","TreadArt02_02","Tipo 2: banda de chuva (rápida)","tech",".bmp"),
+    T(F,"Tyres","Tread","tread","Prefixo dos arquivos tread??.bin","Modo software, em gp3jamsh\\techjam."),
+    T(F,"Tyres","SatType01","","Tipo 1: marca nos gráficos de TV"),
+    T(F,"Tyres","SatType02","","Tipo 2: marca nos gráficos de TV"),
+    el("div",{class:"hint", style:"color:var(--muted);font-size:12.5px;padding:8px 0 2px"}, L("Pneu de cada equipe (o arquivo de performance pode mudar isso):")),
+    ...teamsSel,
+  ]));
+  const pts = el("div",{class:"pts"});
+  const def = [10,6,4,3,2,1];
+  for (let i = 0; i < 22; i++){
+    const k = "Pos" + String(i+1).padStart(2,"0");
+    const inp = el("input",{type:"number", min:0, max:255}); inp.value = get(F,"RacePoints",k, def[i]||0);
+    inp.addEventListener("change", () => { const v = Math.max(0, Math.min(255, Math.round(+inp.value||0))); inp.value = v; put(F,"RacePoints",k,v); });
+    pts.append(el("label",{}, (i+1) + "º", inp));
+  }
+  const presets = el("div",{class:"tools"});
+  for (const [nm, arr] of [["1991–2002",[10,6,4,3,2,1]],["2003–2009",[10,8,6,5,4,3,2,1]],["2010+",[25,18,15,12,10,8,6,4,2,1]]]){
+    const b = el("button",{class:"btn small"}, nm);
+    b.addEventListener("click", () => { for (let i = 0; i < 22; i++) put(F,"RacePoints","Pos"+String(i+1).padStart(2,"0"), arr[i]||0); put(F,"RacePoints","Enable",1); render(); });
+    presets.append(b);
+  }
+  out.push(group("Pontos", [
+    B(F,"RacePoints","Enable",0,"Pontuação da temporada"),
+    el("div",{class:"tools"}, el("span",{class:"hint"}, L("Modelos:")), ...presets.childNodes),
+    pts,
+  ]));
+  return out;
+}
+function buildCarset(){
+  const F = carsetName();
+  const list = [...(S.carsets||[]), ...(S.seasons||[])].sort(natural);
+  const out = [group("Carset em edição", [
+    row("Arquivo", "Carsets ficam na pasta gpxpdata. A temporada escolhe qual usar em cada pista.", setPicker(F, list, pickCarset, "carset")),
+  ])];
+  if (!F){ out.push(notice(L("Nenhum carset ainda. Crie um com “Novo…”."))); return out; }
+  if (!INI[F] || !Object.keys(INI[F]).length) out.push(notice(L("O arquivo {0} ainda está vazio.", F)));
+  out.push(utf8Notice(F));
+  const perfPath = get(F,"Performance","Path","");
+  const perf = PERF[perfPath];
+  const pit = el("div",{class:"pts"});
+  for (let i = 0; i < 11; i++){
+    const k = "Pos" + String(i+1).padStart(2,"0");
+    const inp = el("input",{type:"number", min:1, max:11}); inp.value = get(F,"TeamPitOrder",k, i+1);
+    inp.addEventListener("change", () => { const v = Math.max(1, Math.min(11, Math.round(+inp.value||1))); inp.value = v; put(F,"TeamPitOrder",k,v); });
+    pit.append(el("label",{title: teamInfo(F, i).name}, L("Box {0}", i+1), inp));
+  }
+  out.push(group("Equipes e pilotos", [
+    B(F,"Performance","Enable",0,"Usar arquivo de performance","Nomes, performance, pneus e câmbio das equipes."),
+    {t:"jam",f:F,s:"Performance",k:"Path",label:"Arquivo de performance",root:"game",ext:".txt",hint:"Feito com o GP3 2000 Editor / TeamEditor."},
+    perfPath && perf && !perf.teams.length ? notice(L("Nenhuma equipe encontrada em {0}.", perfPath)) : null,
+    B(F,"TeamPitOrder","Enable",0,"Ordem dos boxes","Equipe em cada posição do pitlane (1 = primeiro box)."),
+    pit,
+  ]));
+  out.push(group("Pista", [
+    B(F,"Track","Enable",0,"Pista própria deste carset","Tem prioridade sobre o conjunto de pistas (a não ser que a aba GPxTrack diga para ignorar). Só vale quando o carset é de uma pista."),
+    {t:"jam",f:F,s:"Track",k:"Path",label:"Arquivo da pista",root:"game",ext:".dat"},
+    JAM(F,"TrackJams","Podgen04","Jam do box (podgen04)","jams",".jam","Em gp3jams; padrão: genjam\\podgen04.jam."),
+    SEL(F,"TrackJams","Tarmac","","Bitmap do asfalto",() => [["", L("(o da aba GPxSet)")]].concat((S.tarmacs||[]).map(x => [x, x]))),
+  ]));
+  const car = (sec) => jamGrid(F, sec, ["Carro 1","Carro 2"], (t, n) => "Jam" + String(t*2+n+1).padStart(2,"0"), "liv");
+  const cars = car("Cars"), cks = car("Cockpits");
+  out.push(group("Pinturas dos carros", [el("div",{class:"tools"}, fillButton(cars.slots, "liv", ".jam"), el("span",{class:"hint"}, L("Os arquivos ficam em gp3jams\\liveries ou gp3jamsh\\liveries (ou subpastas). O GPx ordena as pinturas pelo id do jam: confira se cada uma está na equipe certa."))), cars.table]));
+  out.push(group("Cockpits", [el("div",{class:"tools"}, fillButton(cks.slots, "liv", ".jam")), cks.table]));
+  out.push(group("Capacetes", [
+    JAM(F,"Helmets","Jam01","Capacetes 1","liv",".jam","O nome precisa começar com “helmet”, e a versão software (gp3jams) precisa existir."),
+    JAM(F,"Helmets","Jam02","Capacetes 2","liv",".jam"),
+  ]));
+  const jm = jamGrid(F, "JackMen", ["Macaco 1","Macaco 2"], (t, n) => "Jam" + String(t+1).padStart(2,"0") + "_" + String(n+1).padStart(2,"0"), "main");
+  out.push(group("Mecânicos do macaco", [el("div",{class:"tools"}, fillButton(jm.slots, "main", ".jam"), el("span",{class:"hint"}, L("Em gp3jams\\main ou gp3jamsh\\main (ou subpastas)."))), jm.table]));
+  const pc = jamGrid(F, "PitCrews", ["1","2","3","4","5","6"], (t, n) => "Jam" + String(t+1).padStart(2,"0") + "_" + String(n+1).padStart(2,"0"), "main");
+  out.push(group("Equipe de box", [el("div",{class:"tools"}, fillButton(pc.slots, "main", ".jam")), pc.table]));
+  return out;
+}
+/* mark files that do not exist */
+let checkTimer = null;
+function checkFiles(){
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(async () => {
+    const ins = [...document.querySelectorAll("#main input[data-alts]")].filter(i => i.dataset.alts);
+    if (!ins.length) return;
+    try{
+      const r = await (await api("/api/exists", ins.map(i => i.dataset.alts).join("\n"))).json();
+      ins.forEach((i, n) => { const miss = !r[n]; i.classList.toggle("missing", miss); i.title = miss ? L("Arquivo não encontrado: {0}", i.value) : i.value; });
+    }catch(e){}
+  }, 150);
+}
+
+/* ---------- GPxCInfo ---------- */
+function buildCInfo(){
+  const F = "gpxcinfo.ini";
+  const P = (INI[F] && INI[F]["panel"]) ? INI[F]["panel"].keys : {};
+  const used = [];
+  for (let i = 1; i < 64; i++){ const p = P["path"+i]; if (p) used.push([i, p.v]); }
+  const avail = (S.panels||[]).map(p => p.replace(/^pnl\\/i,"")).filter(p => !/(^|\\)fonts\.ini$/i.test(p));
+  const list = el("div");
+  if (!used.length) list.append(el("div",{class:"empty"}, L("Nenhum painel configurado.")));
+  for (const [i, p] of used) list.append(widget(B(F,"Panel","Enable"+i,1,p)));
+  const add = el("select",{class:"wide"}); add.append(el("option",{value:""}, L("Adicionar painel…")));
+  for (const a of avail) if (!used.some(u => u[1].toLowerCase()==a.toLowerCase())) add.append(el("option",{value:a}, a));
+  add.addEventListener("change", () => { if (!add.value) return; let n = 1; while (P["path"+n]) n++; put(F,"Panel","Path"+n, add.value); put(F,"Panel","Enable"+n, 1); render("cinfo"); });
+  return [
+    group("Painéis", [list, row("Novo painel", "Os painéis ficam em gpxpdata/pnl.", add)]),
+    group("Exportar", [B(F,"Export","Enable",0,"Exportar os dados do carro")]),
+    notice(L("O editor visual de painéis do Windows não existe aqui: para mudar o desenho de um painel, edite o .ini dele em gpxpdata/pnl.")),
+  ];
+}
+
+/* ---------- keys ---------- */
+const KEYLABEL = {
+ PanelSize:"Painel: aumentar", PanelSizeLess:"Painel: diminuir", PanelUp:"Painel: subir", PanelDown:"Painel: descer", PanelPageUp:"Painel: página acima", PanelPageDown:"Painel: página abaixo",
+ PanelHome:"Painel: início", PanelEnd:"Painel: fim", PanelLock:"Painel: travar", PanelAlphaLess:"Painel: mais transparente", PanelAlphaMore:"Painel: menos transparente", Screenshot:"Captura de tela",
+ SAT_ToggleOnOff:"TV: mostrar/esconder tudo", SAT_ToggleSpeedSplit:"TV: parciais / velocidade", SAT_Standings:"TV: classificação", SAT_TowerStandings:"TV: torre embaixo", SAT_TowerLeft:"TV: torre da esquerda",
+ SAT_ScrollNext:"TV: próxima página", SAT_TimeLeft:"TV: tempo restante / voltas", SAT_MicroTime:"TV: microtime", SAT_MicroTimeCompare:"TV: microtime, comparação", SAT_MicroTimeSwitchABS:"TV: microtime, relativo/absoluto",
+ SAT_DirectorsCut:"TV: director's cut", SAT_InfoScreen:"TV: mapa de informações", SAT_TrackMap:"TV: mapa da pista",
+ LAP_PageClear:"Lap: limpar página", LAP_PageLog:"Lap: log", LAP_PageATL:"Lap: tabela de tempos", LAP_PageMode:"Lap: modo da página", LAP_PageMode2:"Lap: modo da página 2", LAP_HotseatJump:"Lap: hotseat",
+ LAP_SaveCarState:"Lap: salvar estado do carro", LAP_RestoreCarState:"Lap: restaurar estado do carro", LAP_Quicksave:"Lap: quicksave",
+ LAP_ToggleSetupMenuOnOff:"Lap: menu de acerto", LAP_TogglePitSetupMenuOnOff:"Lap: menu de acerto no box", LAP_PitSetupMenuSelect:"Lap: acerto no box, escolher", LAP_PitSetupMenuDown:"Lap: acerto no box, descer", LAP_PitSetupMenuUp:"Lap: acerto no box, subir",
+ CInfo_ToggleOnOff:"CInfo: mostrar/esconder",
+ Game_Replay:"Jogo: replay", Game_CamTrack:"Jogo: câmera da pista", Game_CamCockpit:"Jogo: cockpit", Game_CamChaseFront:"Jogo: câmera de perseguição (frente)", Game_CamChaseRear:"Jogo: câmera de perseguição (trás)",
+ Game_CamOnboard:"Jogo: câmera de bordo", Game_CamChaseZoomIn:"Jogo: zoom +", Game_CamChaseZoomOut:"Jogo: zoom −", Game_CamChaseZoomReset:"Jogo: zoom normal", Game_CamChaseShiftUp:"Jogo: câmera para cima",
+ Game_CamChaseShiftDown:"Jogo: câmera para baixo", Game_CamChaseShiftReset:"Jogo: câmera normal", Game_DriverName:"Jogo: nome do piloto", Game_Gap:"Jogo: diferença", Game_QuitRun:"Jogo: sair",
+ Game_Pit:"Jogo: box", Game_ProcessorOccupancy:"Jogo: PO", Game_DirectorMode:"Jogo: modo diretor (TV)", Game_CarSelectOwn:"Jogo: seu carro", Game_CarSelectNext:"Jogo: próximo carro", Game_CarSelectPrevious:"Jogo: carro anterior",
+ Game_HelpAutoBrake:"Ajuda: freio automático", Game_HelpAutoGear:"Ajuda: câmbio automático", Game_HelpAutoDirection:"Ajuda: direção automática", Game_HelpIndestructibility:"Ajuda: indestrutível",
+ Game_HelpSuggestedLine:"Ajuda: linha ideal", Game_HelpSuggestedGear:"Ajuda: marcha sugerida", Game_HelpTractionControl:"Ajuda: controle de tração", Game_HelpSteeringHelp:"Ajuda: direção assistida", Game_HelpLaunchControl:"Ajuda: largada",
+ Game_ControlSteerRight:"Controle: direita", Game_ControlSteerLeft:"Controle: esquerda", Game_ControlBrake:"Controle: freio", Game_ControlAccelerate:"Controle: acelerador", Game_ControlShiftUp:"Controle: subir marcha", Game_ControlShiftDown:"Controle: descer marcha",
+};
+function keyName(e){
+  const c = e.code;
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3);
+  if (/^Digit\d$/.test(c)) return c.slice(5);
+  if (/^F\d+$/.test(c)) return c;
+  if (/^Numpad\d$/.test(c)) return "NP_" + c.slice(6);
+  const m = {NumpadDivide:"NP_/",NumpadMultiply:"NP_*",NumpadSubtract:"NP_-",NumpadAdd:"NP_+",NumpadDecimal:"NP_.",NumpadEnter:"ENTER",Enter:"ENTER",Tab:"TAB",Insert:"INSERT",Delete:"DELETE",
+    Backspace:"BACKSPACE",PageUp:"PAGEUP",PageDown:"PAGEDOWN",Home:"HOME",End:"END",ArrowUp:"UP",ArrowDown:"DOWN",ArrowLeft:"LEFT",ArrowRight:"RIGHT",ShiftLeft:"SHIFT",ShiftRight:"SHIFT",
+    ControlLeft:"CTRL",ControlRight:"CTRL",AltLeft:"ALT",AltRight:"ALT",Space:"SPACE",Backquote:"`",Minus:"-",Equal:"=",BracketLeft:"[",BracketRight:"]",Backslash:"\\",IntlBackslash:"\\",
+    Semicolon:";",Quote:"'",Comma:",",Period:".",Slash:"/",IntlRo:"/",CapsLock:"CAPSLOCK",NumLock:"NUMLOCK",ScrollLock:"SCROLLLOCK",Pause:"PAUSE"};
+  return m[c] || null;
+}
+function buildKeys(){
+  const F = "keys.ini";
+  const binds = (INI[F] && INI[F]["binds"]) ? Object.values(INI[F]["binds"].keys) : [];
+  if (!binds.length) return [notice(L("gpxpdata/keys.ini ainda não existe: ele é criado na primeira vez que o jogo roda com o GPxPatch. Inicie o jogo uma vez e volte aqui."))];
+  const tb = el("table",{class:"k"}); const buttons = [];
+  const markDups = () => {
+    const count = {}; for (const b of buttons){ const v = b.textContent.toUpperCase(); count[v] = (count[v]||0) + 1; }
+    for (const b of buttons) b.classList.toggle("dup", count[b.textContent.toUpperCase()] > 1 && !/^(TAB|BACKSPACE)$/.test(b.textContent));
+  };
+  for (const {k, v} of binds){
+    const b = el("button",{class:"btn small keybtn", title:L("Clique e aperte a nova tecla (Esc cancela)")}, v);
+    b.addEventListener("click", () => {
+      b.classList.add("wait"); const old = b.textContent; b.textContent = L("aperte…");
+      const h = (e) => { e.preventDefault(); e.stopPropagation(); window.removeEventListener("keydown", h, true); b.classList.remove("wait");
+        if (e.code == "Escape"){ b.textContent = old; return; }
+        const n = keyName(e); if (!n){ b.textContent = old; status(L("Essa tecla não pode ser usada pelo GPx.")); return; }
+        b.textContent = n; put(F, "Binds", k, n); markDups(); };
+      window.addEventListener("keydown", h, true);
+    });
+    buttons.push(b);
+    tb.append(el("tr",{}, el("td",{}, KEYLABEL[k] ? L(KEYLABEL[k]) : k), el("td",{class:"act"}, k), el("td",{style:"text-align:right"}, b)));
+  }
+  markDups();
+  return [group("Teclas de atalho (gpxpdata/keys.ini)", [tb], "Clique na tecla e aperte a nova. Em amarelo: tecla usada por mais de uma ação. As teclas “Jogo:” e “Controle:” também mudam as teclas do próprio GP3.")];
+}
+
+/* ---------- fonts ---------- */
+function buildFonts(){
+  const F = "fonts.ini"; const secs = INI[F] ? Object.values(INI[F]) : [];
+  const ttfs = (S.ttfs||[]).slice();
+  const cards = el("div");
+  if (!secs.length) cards.append(el("div",{class:"empty"}, L("Nenhuma fonte definida (o GPx usa as padrão).")));
+  for (const sec of secs){
+    const s = sec.name;
+    const c = el("div",{class:"fontcard"}, el("div",{class:"head"}, el("b",{}, s)));
+    c.append(widget(T(F,s,"FaceName","","Nome da fonte","Ex.: Courier New, Arial. No Linux é trocada pela equivalente (Liberation).")));
+    c.append(widget(SEL(F,s,"FontFile","","Arquivo da fonte",()=>[["","(fonte do sistema)"]].concat(ttfs.map(t=>[t,t])))));
+    c.append(widget(N(F,s,"Height",12,"Altura","Em 1024x768.",{min:4,max:96})));
+    c.append(widget(SEL(F,s,"Bold","0","Peso",[["0","Normal"],["400","Regular"],["700","Negrito"]])));
+    c.append(widget(B(F,s,"Italic",0,"Itálico")));
+    c.append(widget(N(F,s,"InterLineSpacing",0,"Espaço entre linhas",null,{min:-20,max:40})));
+    cards.append(c);
+  }
+  const name = el("input",{type:"text", placeholder:L("nome da nova fonte")});
+  const add = el("button",{class:"btn small"}, L("Adicionar"));
+  add.addEventListener("click", () => { const n = name.value.trim().replace(/[\[\]=\t]/g,""); if (!n) return; put(F, n, "FaceName", "Arial"); put(F, n, "Height", 14); render("fonts"); });
+  return [group("Fontes do GPxPatch (gpxpdata/fonts.ini)", [cards, row("Nova fonte", "Depois escolha-a nas abas GPxLap e GPxSAT.", name, add)])];
+}
+
+/* ---------- page ---------- */
+let current = "gpx";
+function texts(){
+  document.documentElement.lang = LANG == "en" ? "en" : "pt-BR";
+  document.title = L("GPxPatch para Linux");
+  document.getElementById("for").textContent = L("para Linux");
+  document.getElementById("langl").textContent = L("Idioma");
+  document.getElementById("go").textContent = L("Iniciar com GPxPatch");
+  document.getElementById("go0").textContent = L("Iniciar sem GPxPatch");
+  if (S) document.getElementById("meta").textContent = gameName() + "  ·  " + S.dir + "  ·  GP3RT " + S.version;
+}
+function render(id){
+  current = id || current;
+  try{ localStorage.setItem("gpx.tab", current); }catch(e){}
+  texts();
+  const nav = document.getElementById("nav"); nav.innerHTML = "";
+  for (const t of TABS){
+    if (t.sep){ nav.append(el("div",{class:"sep"})); continue; }
+    if (t.only2000 && !is2000()) continue;
+    const b = el("button",{class: t.id==current ? "on" : ""}, L(t.name)); b.addEventListener("click", () => render(t.id)); nav.append(b);
+  }
+  const m = document.getElementById("main"); m.innerHTML = ""; uid = 0;
+  let tab = TABS.find(t => t.id==current);
+  if (!tab || (tab.only2000 && !is2000())){ current = "gpx"; tab = TABS[0]; }
+  m.append(el("h2",{}, L(tab.name)));
+  if (!S.gpx && tab.id!="gp3rt"){
+    m.append(notice(L("O GPxPatch não está instalado nesta pasta. Baixe o GPxPatch 4.52 em www.sdidit.nl, instale (pelo Wine ou num PC com Windows) e deixe o GPxPSup.dll e a pasta gpxpdata na pasta do jogo (veja o README / LEIAME). Depois abra esta tela de novo.")));
+  } else if (S.gpx && !S.gpxsup && tab.id=="gpx"){
+    m.append(notice(L("Falta o arquivo GPxPSup.dll na pasta do jogo: sem ele o GPxPatch não carrega.")));
+  }
+  for (const part of tab.build()) if (part) m.append(part);
+  checkFiles();
+}
+async function reload(){
+  const y = window.scrollY;
+  const r = await api("/api/state"); S = await r.json();
+  INI = {};
+  for (const [n, t] of Object.entries(S.files)) if (n != "trackset" && n != "trackset_text") INI[n] = parseIni(t);
+  await preloadSeason();
+  render(); window.scrollTo(0, y);
+}
+async function load(){
+  const r = await api("/api/state"); S = await r.json();
+  INI = {};
+  for (const [n, t] of Object.entries(S.files)) if (n != "trackset" && n != "trackset_text") INI[n] = parseIni(t);
+  LANG = get("gp3rt.ini","launcher","language","") || ((navigator.language||"pt").toLowerCase().startsWith("pt") ? "pt" : "en");
+  if (LANG != "en") LANG = "pt";
+  document.getElementById("lang").value = LANG;
+  setRunning(S.running);
+  try{ const t = localStorage.getItem("gpx.tab"); if (t && TABS.some(x => x.id==t)) current = t; }catch(e){}
+  await preloadSeason();
+  /* build every GPx tab once, off screen: options missing from the .ini files get the value shown (see widget) */
+  if (S.gpx) for (const t of TABS) if (t.build && t.id != "gp3rt" && !(t.only2000 && !is2000())) { try{ t.build(); }catch(e){} }
+  render();
+}
+document.getElementById("lang").addEventListener("change", (e) => { LANG = e.target.value; put("gp3rt.ini","launcher","language",LANG); render(); });
+function setRunning(r){
+  running = r;
+  document.getElementById("go").disabled = r; document.getElementById("go0").disabled = r;
+  if (r) status(L("Jogo em execução…"));
+}
+async function launch(gpx){
+  if (is2000() && get("gpxset.ini","CommandLine","SeasonSet","")) put("gpxset.ini","CommandLine","SeasonSet","");
+  await flush();
+  const j = await (await api("/api/launch", "gpx=" + (gpx?1:0))).json();
+  setRunning(j.running);
+  if (!j.running) status(L("Não foi possível iniciar o jogo (veja gp3linux-gpxpatch.log)."));
+}
+document.getElementById("go").addEventListener("click", () => launch(true));
+document.getElementById("go0").addEventListener("click", () => launch(false));
+window.addEventListener("keydown", (e) => { if (e.ctrlKey && e.key.toLowerCase()=="s"){ e.preventDefault(); if (!running) launch(true); } });
+setInterval(async () => {
+  try{
+    const j = await (await api("/api/status")).json();
+    if (running && !j.running){ setRunning(false); status(j.last_exit > 0 ? L("O jogo fechou com erro ({0}). Veja gp3linux-game.log na pasta do jogo.", j.last_exit) : L("Jogo encerrado.")); }
+    else if (!running && j.running) setRunning(true);
+  }catch(e){ status(L("O GP3RT foi fechado. Abra de novo pelo atalho “GPxPatch”.")); }
+}, 3000);
+window.addEventListener("beforeunload", () => { if (queue.length){ const body = queue.map(q => q.join("\t")).join("\n"); fetch("/api/save",{method:"POST",headers:{"X-Token":TOKEN},body,keepalive:true}); } });
+let byeSent = false;
+function bye(){ if (byeSent) return; byeSent = true; try{ navigator.sendBeacon("/api/bye?t=" + TOKEN, ""); }catch(e){} }
+window.addEventListener("pagehide", bye);
+window.addEventListener("beforeunload", bye);
+const EN = {
+"GP3RT · a tela do GPxPatch 4.52 para Windows · versão":"GP3RT · the GPxPatch 4.52 screen for Windows · version",
+"A mesma tela do GP3RT para Linux, agora também no Windows.":"The same GP3RT screen as on Linux, now on Windows too.",
+"Não foi possível iniciar o jogo (veja gpxpatch-gp3rt.log).":"Could not start the game (see gpxpatch-gp3rt.log).",
+
+"GP3RT · edição para Linux do GPxPatch 4.52 · versão":"GP3RT · Linux edition of GPxPatch 4.52 · version",
+
+"Selecionar temporada":"Select season",
+"Pinturas, capacetes, mecânicos, pneus, pontos e pistas de uma temporada (.set na pasta gpxpdata).":"Liveries, helmets, mechanics, tyres, points and tracks of a season (.set in the gpxpdata folder).",
+"Editar…":"Edit…",
+"Força do carro dependendo da equipe":"Team dependent car power",
+"O seu carro fica com a performance do carro do computador da mesma equipe. “Potência e aderência” é o recomendado.":"Your car gets the performance of the computer car of the same team. “Power and grip” is recommended.",
+"Carshape":"Carshape",
+"Física":"Physics",
+"Torque":"Torque",
+"Bitmap da pista":"Track bitmap",
+"O asfalto, em gp3jamsh\\techjam.":"The tarmac, in gp3jamsh\\techjam.",
+"Imagens skyaNN.bmp em gp3jamsh\\techjam (céu de dia, entardecer, noite...).":"skyaNN.bmp images in gp3jamsh\\techjam (day, sunset, night sky...).",
+"Voltar":"Back",
+"Temporada: {0}":"Season: {0}",
+"Carset: {0}":"Car set: {0}",
+"Pneus":"Tyres",
+"Pontos":"Points",
+"Carsets":"Car sets",
+"Esta temporada ainda não está ligada: o jogo usa os carros originais. Ligue “Selecionar temporada” na aba GPxSet.":"This season is not switched on yet: the game uses the original cars. Switch on “Select season” in the GPxSet tab.",
+"Ativar carsets específicos da pista":"Enable track specific car sets",
+"Cada pista pode ter o seu carset; as que não têm usam o de todas as pistas.":"Each track can have its own car set; the others use the one for all tracks.",
+"Carset para a pista":"Car set for track",
+"Todas as pistas":"All tracks",
+"Carset desta pista":"Car set of this track",
+"Vazio: usa o carset de todas as pistas.":"Empty: uses the car set for all tracks.",
+"Arquivo .set com as seções [Cars], [Cockpits]… na pasta gpxpdata.":"A .set file with [Cars], [Cockpits]… sections in the gpxpdata folder.",
+"(o de todas as pistas)":"(the one for all tracks)",
+"Desativar cópia do número do carro":"Disable car number copying",
+"Carshape e física da aba GPxSet têm prioridade sobre os da temporada.":"Carshape and physics of the GPxSet tab take priority over the season's.",
+"Selecionar pistas":"Select tracks",
+"Um conjunto de pistas da aba GPxTrack. A pista escolhida num carset tem prioridade.":"A track set from the GPxTrack tab. A track chosen in a car set takes priority.",
+"Gráficos do menu":"Menu graphics",
+"GPxSAT modalidade":"GPxSAT mode",
+"Os gráficos de TV usados nesta temporada.":"The TV graphics used in this season.",
+"Pneu de cada equipe":"Tyre of each team",
+"Pontos de cada posição na corrida.":"Points for each race position.",
+"Modelos":"Presets",
+"Duplicar temporada…":"Duplicate season…",
+"Equipes e pista":"Teams and track",
+"Pinturas":"Liveries",
+"Capacetes":"Helmets",
+"Mecânicos":"Mechanics",
+"Créditos":"Credits",
+"Edição para Linux do GPxPatch 4.52 · GP3RT":"Linux edition of GPxPatch 4.52 · GP3RT",
+"Grand Prix 3 e Grand Prix 3 2000 nativos no Linux, sem Wine.":"Grand Prix 3 and Grand Prix 3 2000 native on Linux, no Wine.",
+"GPxPatch original (Windows)":"Original GPxPatch (Windows)",
+"Edição para Linux":"Linux edition",
+"Jogo e componentes":"Game and components",
+"Autor do GPxPatch (2001–2019): GPxSet, GPxTrack, GPxLap, GPxCInfo, GPxSound e a tela de configuração original.":"Author of GPxPatch (2001–2019): GPxSet, GPxTrack, GPxLap, GPxCInfo, GPxSound and the original configuration screen.",
+"GPxSAT Classic e Digital (Marc Aarts, 2001–2004) e GPxSAT Digital 2004 (Markus Krötz).":"GPxSAT Classic and Digital (Marc Aarts, 2001–2004) and GPxSAT Digital 2004 (Markus Krötz).",
+"Painel Lo2k Blue Theme do GPxCInfo (2004) e os adjetivos dos países dos menus (adjectiv.ini).":"GPxCInfo Lo2k Blue Theme panel (2004) and the country adjectives of the menus (adjectiv.ini).",
+"O GPxPatch é freeware. Os módulos que rodam dentro do jogo (GPxPSup.dll e a pasta gpxpdata) são os originais do autor, instalados por você, e não fazem parte deste pacote.":"GPxPatch is freeware. The modules that run inside the game (GPxPSup.dll and the gpxpdata folder) are the author's originals, installed by you, and are not part of this package.",
+"O GPxPatch é freeware, de René Smit, e não vem neste pacote: baixe o GPxPatch 4.52 no site do autor (www.sdidit.nl) e instale na pasta do jogo, como explica o README / LEIAME.":"GPxPatch is freeware by René Smit and is not included in this package: download GPxPatch 4.52 from the author's site (www.sdidit.nl) and install it into the game folder, as the README explains.",
+"O GPxPatch 4.52 veio junto neste pacote (arquivos originais, sem nenhuma alteração, com autorização do autor, René Smit). Clique abaixo para colocá-lo na pasta do jogo. Nenhum arquivo que já esteja lá é substituído.":"GPxPatch 4.52 comes with this package (original files, completely unmodified, with the permission of its author, René Smit). Click below to put it in the game folder. No file already there is replaced.",
+"Instalar o GPxPatch 4.52":"Install GPxPatch 4.52",
+"GPxPatch 4.52 instalado na pasta do jogo.":"GPxPatch 4.52 installed in the game folder.",
+"Não foi possível instalar o GPxPatch na pasta do jogo.":"Could not install GPxPatch in the game folder.",
+"GPxPatch para Linux e GP3RT: o carregador que roda o Gp3.exe original no Linux, sem Wine, e esta tela de configuração refeita em C a partir da original, com os mesmos arquivos .ini e .set, para que tudo funcione igual no Windows e no Linux.":"GPxPatch for Linux and GP3RT: the loader that runs the original Gp3.exe on Linux, without Wine, and this configuration screen rebuilt in C from the original, with the same .ini and .set files, so everything works the same on Windows and Linux.",
+"Desenvolvimento junto com o Rodrigo.":"Developed together with Rodrigo.",
+"Grand Prix 3 (1.13) e Grand Prix 3 2000.":"Grand Prix 3 (1.13) and Grand Prix 3 2000.",
+"SDL2 (licença zlib), Nuklear (domínio público / MIT) e a fonte Inter de Rasmus Andersson (SIL Open Font License).":"SDL2 (zlib licence), Nuklear (public domain / MIT) and the Inter font by Rasmus Andersson (SIL Open Font License).",
+
+"Opções":"Options",
+"Abrir…":"Open…",
+"Excluir":"Delete",
+"Confirmar":"Confirm",
+"(original)":"(original)",
+"Esse arquivo .set não é um conjunto de pistas.":"That .set file is not a track set.",
+"Conjunto “{0}” copiado para a pasta gpxpdata e escolhido.":"Set “{0}” copied to the gpxpdata folder and selected.",
+"Conjunto “{0}” excluído.":"Set “{0}” deleted.",
+"Nome do novo conjunto de pistas (ex.: temporada2006):":"Name of the new track set (e.g. season2006):",
+"Seleção de pistas":"Track selection",
+
+"Nome":"Name",
+"Mostrar o texto":"Show the text",
+"Só nestas pistas (números)":"Only on these tracks (numbers)",
+"Congelar no máximo (ms)":"Freeze at maximum (ms)",
+"Segunda cor":"Second colour",
+"Segunda opacidade (0 a 1)":"Second opacity (0 to 1)",
+"Peso esquerda":"Left weight",
+"Peso topo":"Top weight",
+"Peso direita":"Right weight",
+"Peso base":"Bottom weight",
+"Limiar":"Threshold",
+"Limiar superior":"Upper threshold",
+"Deslocamento X":"X offset",
+"Deslocamento Y":"Y offset",
+"Média de quadros":"Average over frames",
+"Usar imagens":"Use images",
+"Imagens na posição do item":"Images at the item position",
+"Cor quando desligado":"Colour when off",
+"Cor quando ocupado":"Colour when busy",
+"Cor quando mais rápido":"Colour when faster",
+"Cor quando mais lento":"Colour when slower",
+"Cor quando desativado":"Colour when disabled",
+"Cor quando sempre ligado":"Colour when always on",
+"Mostrar o total de voltas":"Show total laps",
+"Mostrar as voltas restantes":"Show laps left",
+"Modo corrida":"Race mode",
+"Letras do nome":"Name length",
+"Sinal":"Sign",
+"Mostrar milésimos":"Show milliseconds",
+"Mostrar a diferença":"Show the difference",
+"Contagem regressiva":"Count down",
+"Começar em (minutos)":"Start at (minutes)",
+"Origem X":"Source X",
+"Origem Y":"Source Y",
+"Largura na origem":"Source width",
+"Altura na origem":"Source height",
+"Só para a equipe":"Only for the team",
+"Só para o carro":"Only for the car",
+"Sublinhado":"Underline",
+"Rotação (RPM)":"Revs (RPM)",
+"Velocidade":"Speed",
+"Temperatura da água":"Water temperature",
+"Diferença para o da frente":"Gap to the car in front",
+"Diferença para o de trás":"Gap to the car behind",
+"Chamada para o box":"Pit request",
+"Tempo da volta":"Lap time",
+"Tempo da sessão":"Session time",
+"Nome do piloto":"Driver name",
+"Uso do processador (PO)":"Processor occupancy (PO)",
+"Texto fixo":"Label",
+"Aviso (falha)":"Warning (failure)",
+"Item “{0}” adicionado no fim da lista. Ajuste a posição abaixo.":"Item “{0}” added at the end of the list. Adjust its position below.",
+"Controle: linha giratória":"Control: rotating line",
+"Controle: imagem animada":"Control: image",
+"Cortar (truncar)":"Truncate",
+"Escalar":"Scale",
+"Girar":"Rotate",
+"Mover entre duas posições":"Transpose",
+"Alternar imagens":"Toggle",
+"Preenchimento radial":"Radial fill",
+"Não":"No",
+"Parar no mínimo/máximo":"Stop at min/max",
+"Esconder fora do mínimo/máximo":"Hide beyond min/max",
+"Limite no mínimo/máximo":"Cut off at min/max",
+"Imagem alternativa":"Alternative image",
+"Imagem do controle":"Control image",
+"Fechar":"Close",
+"Subir":"Up",
+"Descer":"Down",
+"Tipo":"Type",
+"Automático":"Automatic",
+"Centro":"Centre",
+"Padrão":"Default",
+"Fixa":"Fixed",
+"Misturar entre as duas cores":"Blend between the two colours",
+"Nenhum (só texto)":"None (text only)",
+"Linha giratória (ponteiro)":"Rotating line (needle)",
+"Imagem animada":"Image",
+"Modo da cor":"Colour mode",
+"Controle":"Control",
+"Mais opções":"More options",
+"As alterações são salvas na hora. Posições em pixels numa tela de 1024x768 (ou na resolução indicada em Direita/Base). No jogo: tecla I mostra/esconde, Ctrl+1 a Ctrl+0 ligam e desligam cada painel.":"Changes are saved at once. Positions are in pixels on a 1024x768 screen (or the resolution given in Right/Bottom). In the game: key I shows/hides, Ctrl+1 to Ctrl+0 toggle each panel.",
+"Adicionar item…":"Add item…",
+"Mover para as bordas":"Move to edges",
+"Esticar":"Stretch",
+"Centralizar":"Centre",
+"Ajuste à resolução":"Scaling",
+"Este painel ainda não tem itens. Use “Adicionar item…”.":"This panel has no items yet. Use “Add item…”.",
+"Remover imagem":"Remove image",
+"Texto":"Text",
+
+"A imagem precisa estar na pasta do painel (ou em gpxpdata\\gfx): foi usado só o nome do arquivo.":"The image must be in the panel's folder (or in gpxpdata\\gfx): only the file name was used.",
+"Acelerador":"Throttle",
+"Aceleração (frente/trás)":"Longitudinal acceleration",
+"Aceleração lateral":"Lateral acceleration",
+"Adicionar campo…":"Add field…",
+"Adicionar elemento…":"Add element…",
+"Adicionar imagem":"Add image",
+"Adicionar painel":"Add panel",
+"Ajuda F1":"Help F1",
+"Ajuda F2":"Help F2",
+"Ajuda F3":"Help F3",
+"Ajuda F4":"Help F4",
+"Ajuda F5":"Help F5",
+"Ajuda F6":"Help F6",
+"Ajuda F7":"Help F7",
+"Ajuda F8":"Help F8",
+"Ajuda F9":"Help F9",
+"Ajustar à resolução":"Scale to the resolution",
+"Alinhamento":"Alignment",
+"Arquivo não encontrado em gpxpdata/pnl.":"File not found in gpxpdata/pnl.",
+"Bandeira amarela":"Yellow flag",
+"Bandeira azul":"Blue flag",
+"Base":"Bottom",
+"Box (pit)":"Pit",
+"Cada parte do painel é um elemento. As posições são em pixels numa tela de 1024x768. Salve e veja no jogo: os painéis aparecem na corrida (tecla I mostra/esconde).":"Each part of the panel is an element. Positions are in pixels on a 1024x768 screen. Changes are saved at once: see them in the game, where panels show during sessions (key I shows/hides them).",
+"Casas decimais":"Decimals",
+"Circuito {0}":"Circuit {0}",
+"Com os gráficos de TV":"With the TV graphics",
+"Combustível":"Fuel",
+"Comprimento do ponteiro":"Needle length",
+"Confirmar remoção":"Confirm removal",
+"Conta-giros":"Rev counter",
+"Cor":"Colour",
+"Cor do texto":"Text colour",
+"Cronômetro do box":"Pit timer",
+"Câmeras":"Cameras",
+"Deslocamento do ponteiro":"Needle offset",
+"Direita":"Right",
+"Direção":"Steering",
+"Editando o painel {0}":"Editing panel {0}",
+"Editar":"Edit",
+"Elemento “{0}” adicionado. Ajuste a posição e o modo abaixo.":"Element “{0}” added. Adjust its position and mode below.",
+"Escala":"Scale",
+"Esquerda":"Left",
+"Esse elemento já existe neste painel.":"This panel already has that element.",
+"Fechar o editor":"Close the editor",
+"Freio":"Brake",
+"Geral do painel":"Panel settings",
+"Hotseat":"Hotseat",
+"Imagem":"Image",
+"Imagem (.tga)":"Image (.tga)",
+"Imagens":"Images",
+"Marcha":"Gear",
+"Marcha sugerida":"Suggested gear",
+"Melhor volta":"Best lap",
+"Modo":"Mode",
+"Máximo":"Maximum",
+"Mínimo":"Minimum",
+"Na frente dos controles":"In front of the controls",
+"No replay":"In replays",
+"Nome do novo painel (ex.: MeuPainel):":"Name of the new panel (e.g. MyPanel):",
+"Novo painel…":"New panel…",
+"Opacidade (0 a 1)":"Opacity (0 to 1)",
+"Opacidade do texto (0 a 1)":"Text opacity (0 to 1)",
+"Os painéis ficam em gpxpdata/pnl. No jogo, a tecla I mostra e esconde os painéis.":"Panels live in gpxpdata/pnl. In the game, key I shows and hides them.",
+"Painéis transparentes":"Transparent panels",
+"Para o jogador":"For the player",
+"Posição":"Position",
+"Quando mostrar":"When to show",
+"Quantidade":"Count",
+"Remover":"Remove",
+"Remover elemento":"Remove element",
+"Sentido horário":"Clockwise",
+"Slot {0} · {1} no jogo original":"Slot {0} · {1} in the original game",
+"Tempo de jogo":"Game time",
+"Texto antes":"Prefix",
+"Texto depois":"Suffix",
+"Topo":"Top",
+"Trecho da pista / sessão":"Track / session range",
+"Trocas de marcha":"Gear changes",
+"Um painel que já existe em gpxpdata/pnl, ou um novo.":"A panel that already exists in gpxpdata/pnl, or a new one.",
+"Velocímetro":"Speedometer",
+"Volta":"Lap",
+"Ângulo final":"End angle",
+"Ângulo inicial":"Start angle",
+
+"Temporada":"Season","Pneus":"Tyres","Pontos":"Points","Capacetes":"Helmets","Pista":"Track","Arquivo":"File","Pasta":"Folder","Cockpits":"Cockpits",
+"(nenhum)":"(none)","(o carset de todas as pistas)":"(the all-tracks carset)","(o da aba GPxSet)":"(the one in the GPxSet tab)",
+"A física da aba GPxSet tem prioridade.":"The physics in the GPxSet tab take precedence.",
+"A pasta tem {0} arquivos para {1} posições: confira a ordem.":"The folder has {0} files for {1} slots: check the order.",
+"A temporada está desligada: o jogo usa os carros originais. Ligue em “Usar temporada” abaixo.":"The season is off: the game uses the original cars. Turn on “Use season” below.",
+"Arquivo .set com as seções [Cars], [Cockpits]…":".set file with [Cars], [Cockpits]… sections",
+"Arquivo da pista":"Track file","Arquivo da temporada":"Season file","Arquivo dos gráficos do menu":"Menu graphics file",
+"Arquivo não encontrado: {0}":"File not found: {0}",
+"Arquivos .set da pasta gpxpdata com uma seção [CarSets].":".set files in the gpxpdata folder with a [CarSets] section.",
+"Arquivos da temporada":"Season files","Box {0}":"Box {0}","Capacetes 1":"Helmets 1","Capacetes 2":"Helmets 2","Carro 1":"Car 1","Carro 2":"Car 2",
+"Carset de todas as pistas":"Carset for all tracks","Carset diferente por pista":"Track specific carsets","Carset em edição":"Carset being edited",
+"Carsets ficam na pasta gpxpdata. A temporada escolhe qual usar em cada pista.":"Carsets live in the gpxpdata folder. The season chooses which one each track uses.",
+"Carshape da temporada":"Season car shape","Conjunto de pistas da temporada":"Season track set","Converter para Latin-1":"Convert to Latin-1",
+"Dois tipos de pneu":"Two tyre types","Duplicar…":"Duplicate…","Editar este carset":"Edit this carset",
+"Em gp3jams; padrão: genjam\\podgen04.jam.":"In gp3jams; default: genjam\\podgen04.jam.",
+"Em gp3jams\\main ou gp3jamsh\\main (ou subpastas).":"In gp3jams\\main or gp3jamsh\\main (or sub-folders).",
+"Em gp3jams\\main; no modo hardware precisa do .bmp de mesmo nome em gp3jamsh\\techjam.":"In gp3jams\\main; hardware mode also needs the .bmp with the same name in gp3jamsh\\techjam.",
+"Equipe de box":"Pit crew","Equipe em cada posição do pitlane (1 = primeiro box).":"Team in each pit lane position (1 = first pit box).",
+"Equipe {0}":"Team {0}","Equipes e pilotos":"Teams and drivers",
+"Escolha um arquivo dentro de {0}.":"Choose a file inside {0}.","Escolha uma pasta dentro de {0}.":"Choose a folder inside {0}.",
+"Feito com o GP3 2000 Editor / TeamEditor.":"Made with the GP3 2000 Editor / TeamEditor.","Física da temporada":"Season physics","Gráficos do menu":"Menu graphics",
+"Ignorar as pistas da temporada e dos carsets":"Ignore tracks from the season and carsets",
+"Jam do box (podgen04)":"Pit box jam (podgen04)","Já existe um arquivo com esse nome.":"A file with that name already exists.",
+"Macaco 1":"Jack man 1","Macaco 2":"Jack man 2","Mecânicos do macaco":"Jack men","Modalidade dos gráficos de TV da temporada":"Season TV graphics mode",
+"Modelos:":"Presets:","Modo software, em gp3jamsh\\techjam.":"Software mode, in gp3jamsh\\techjam.",
+"Nenhum arquivo {0} nessa pasta.":"No {0} files in that folder.","Nenhum carset ainda. Crie um com “Novo…”.":"No carset yet. Create one with “New…”.",
+"Nenhuma equipe encontrada em {0}.":"No teams found in {0}.","Nome da cópia de {0}:":"Name of the copy of {0}:",
+"Nome da nova temporada (ex.: F1-1998):":"Name of the new season (e.g. F1-1998):","Nome do novo carset (ex.: F1-1998-carros):":"Name of the new carset (e.g. F1-1998-cars):",
+"Nomes, performance, pneus e câmbio das equipes.":"Team names, performance, tyres and gears.",
+"Normalmente a pista escolhida num carset (ou o conjunto de pistas da temporada) tem prioridade sobre esta aba.":"Normally a track chosen in a carset (or the season's track set) takes precedence over this tab.",
+"Novo…":"New…","Não copiar o número do 2º carro":"Disable car number copying","Não foi possível converter {0}.":"Could not convert {0}.","Não foi possível copiar.":"Could not copy.",
+"O GP3 2000 original tem um só.":"The original GP3 2000 has only one.","O arquivo {0} ainda está vazio.":"The file {0} is still empty.",
+"O arquivo {0} não existe ou está vazio. Crie uma temporada com “Novo…”.":"The file {0} does not exist or is empty. Create a season with “New…”.",
+"O carshape da aba GPxSet tem prioridade.":"The car shape in the GPxSet tab takes precedence.",
+"O nome precisa começar com “helmet”, e a versão software (gp3jams) precisa existir.":"The name must start with “helmet”, and the software version (gp3jams) must exist.",
+"Ordem dos boxes":"Team pit order",
+"Os arquivos ficam em gp3jams\\liveries ou gp3jamsh\\liveries (ou subpastas). O GPx ordena as pinturas pelo id do jam: confira se cada uma está na equipe certa.":"The files live in gp3jams\\liveries or gp3jamsh\\liveries (or sub-folders). GPx sorts the liveries by jam id: check that each one is on the right team.",
+"Os conjuntos da aba GPxTrack.":"The track sets of the GPxTrack tab.","Padrão: bitmaps\\gp2000v1.bin.":"Default: bitmaps\\gp2000v1.bin.",
+"Pinturas dos carros":"Car liveries",
+"Pinturas e cockpits dos 22 carros, capacetes, mecânicos, performance e ordem dos boxes.":"Liveries and cockpits of the 22 cars, helmets, pit crews, performance and pit order.",
+"Pinturas, cockpits, capacetes, mecânicos, pneus, pontos e pistas da temporada. Configure nas abas “Temporada” e “Carset”.":"Season liveries, cockpits, helmets, pit crews, tyres, points and tracks. Set them up in the “Season” and “Carset” tabs.",
+"Pista própria deste carset":"Track of this carset","Pistas sem carset próprio usam o de todas as pistas.":"Tracks without their own carset use the all-tracks one.",
+"Pneu de cada equipe (o arquivo de performance pode mudar isso):":"Tyre type of each team (a performance file may override this):",
+"Pontuação da temporada":"Season race points","Preencher com uma pasta…":"Fill from a folder…","Prefixo dos arquivos tread??.bin":"Prefix of the tread??.bin files",
+"Tem prioridade sobre o conjunto de pistas (a não ser que a aba GPxTrack diga para ignorar). Só vale quando o carset é de uma pista.":"Takes precedence over the track set (unless the GPxTrack tab says to ignore it). Only applies when the carset is used for one track.",
+"Temporada em uso":"Season in use","Tipo 1":"Type 1","Tipo 2":"Type 2",
+"Tipo 1: banda de chuva (lenta)":"Type 1: wet tread (slow)","Tipo 1: banda de chuva (rápida)":"Type 1: wet tread (fast)","Tipo 1: marca nos gráficos de TV":"Type 1: TV graphics brand",
+"Tipo 1: pneu (lento)":"Type 1: tyre (slow)","Tipo 1: pneu (rápido, borrado)":"Type 1: tyre (fast, blurred)",
+"Tipo 2: banda de chuva (lenta)":"Type 2: wet tread (slow)","Tipo 2: banda de chuva (rápida)":"Type 2: wet tread (fast)","Tipo 2: marca nos gráficos de TV":"Type 2: TV graphics brand",
+"Tipo 2: pneu (lento)":"Type 2: tyre (slow)","Tipo 2: pneu (rápido, borrado)":"Type 2: tyre (fast, blurred)",
+"Usado quando o carset não escolhe a pista.":"Used when the carset does not choose the track.","Usar esta pasta":"Use this folder",
+"Usar os carsets desta temporada":"Use the carsets of this season","Usar temporada (season set)":"Use season (season set)",
+"Use quando cada pintura já tem o número certo pintado.":"Use it when each livery already has the right number painted.",
+"{0} arquivos atribuídos, em ordem.":"{0} files assigned, in order.","{0} convertido para Latin-1.":"{0} converted to Latin-1.",
+"{0} está gravado em UTF-8. No Linux o GP3RT entende os acentos (ç, ã, é) mesmo assim, mas o GPxPatch do Windows só entende Latin-1 (Windows-1252). ":"{0} is saved as UTF-8. On Linux GP3RT understands its accents (ç, ã, é) anyway, but the Windows GPxPatch only understands Latin-1 (Windows-1252). ",
+"{0} no jogo original":"{0} in the original game",
+
+"{0} valor(es) não salvos":"{0} value(s) not saved","salvo":"saved",
+"Sem conexão com o GP3RT: feche esta aba e abra de novo pelo atalho.":"No connection to GP3RT: close this tab and open it again from the shortcut.",
+"nenhum arquivo":"no file","Procurar…":"Browse…","Acima":"Up","Pasta do jogo":"Game folder","Pasta pessoal":"Home folder","Pasta vazia.":"Empty folder.","Cancelar":"Cancel",
+"temporadas, carros, física, chuva, corrida rápida":"seasons, cars, physics, rain, quick race",
+"pistas da comunidade e limites estendidos":"community tracks and extended limits",
+"tempos (ATL), log, acerto no carro, quicksave":"lap times (ATL), log, in-car setup, quicksave",
+"gráficos de TV":"TV graphics","painéis de informação do carro":"car info panels","sons 3D do motor e do box":"3D engine and pit sounds","vibração (hardware antigo)":"force feedback vest (old hardware)",
+"Criar atalhos":"Create shortcuts",
+"Atalhos criados no menu de aplicativos e na área de trabalho.":"Shortcuts created in the applications menu and on the desktop.",
+"Não foi possível criar os atalhos.":"The shortcuts could not be created.",
+"Crie os atalhos “{0}” e “GPxPatch” no menu de aplicativos e na área de trabalho, para abrir o jogo com dois cliques.":"Create the “{0}” and “GPxPatch” shortcuts in the applications menu and on the desktop, to open the game with a double click.",
+"Ao abrir o jogo":"When the game starts",
+"O atalho do jogo inicia com o GPxPatch":"The game shortcut starts with GPxPatch",
+"Os botões lá embaixo escolhem só para esta vez.":"The buttons at the bottom choose for this time only.",
+"Pular introdução":"Skip intro","Os vídeos de abertura (Esc também pula).":"The opening movies (Esc also skips them).",
+"Pular o menu inicial":"Skip startup menu","Vai direto ao menu principal.":"Goes straight to the main menu.",
+"Pular o menu de clima":"Skip weather menu","Útil na corrida rápida.":"Useful for quick races.",
+"Extensões ativadas":"Enabled extensions","Jogo":"Game",
+"Modo de pausa estendido":"Extended pause mode","Desligado":"Off","Ligado":"On","Ligado depois de apertar Enter na pausa":"On after pressing Enter while paused",
+"Na pausa dá para trocar de câmera e usar as teclas do GPx.":"While paused you can switch cameras and use the GPx keys.",
+"Endereço IP do host (multiplayer)":"Host IP address (multiplayer)","Vazio = procura na rede local.":"Empty = search the local network.","ex.: 200.150.10.20":"e.g. 200.150.10.20",
+"Debug":"Debug","Iniciar em modo debug":"Start in debug mode",
+"Ignora as verificações internas do GP3, como o modo debug do GPxPatch: necessário para pistas que “só funcionam em modo debug”.":"Ignores GP3's internal checks, like GPxPatch's debug mode: needed for tracks that “only work in debug mode”.",
+"Detalhes do registro (gpxpdata/log)":"Log detail (gpxpdata/log)","Normal":"Normal","Detalhado":"Detailed","Muito detalhado":"Very detailed",
+"Temporada":"Season",
+"O editor de temporada (carset com carro 1 e carro 2 de cada equipe, cockpits, mecânicos) do GP3 2000 vem numa próxima versão.":"The GP3 2000 season editor (car set with car 1 and car 2 of each team, cockpits, mechanics) comes in a later version.",
+"Carros":"Cars","Força do carro dependendo da equipe":"Player car performance team dependent",
+"O seu carro fica com a mesma performance do carro do computador da equipe.":"Your car gets the same performance as the team's computer car.",
+"Como a força é aplicada":"Affects","Comportamento antigo":"Old behavior","Só potência":"Power only","Só aderência":"Grip only","Potência e aderência":"Power and grip",
+"“Potência e aderência” é o recomendado para arquivos de performance novos.":"“Power and grip” is recommended for new performance files.",
+"Usar arquivo de performance":"Use performance file","Arquivo de performance":"Performance file","Arquivo .txt feito com o GP3Ed / TeamEditor.":"A .txt file made with GP3Ed / TeamEditor.",
+"Usar carshape":"Use car shape","Arquivo de carshape":"Car shape file","Arquivo .cs3 feito com o editor de carros do Paul Hoad.":"A .cs3 file made with Paul Hoad's car editor.",
+"Usar física personalizada":"Use custom physics","Arquivo de física":"Physics file","Arquivo .g3p do GP3 Advanced Physics Editor.":"A .g3p file from the GP3 Advanced Physics Editor.",
+"Arquivo de torque":"Torque file","Arquivo .ini exportado pelo Torque Editor.":"An .ini file exported by the Torque Editor.",
+"Gráficos":"Graphics","Prefixo das imagens do céu":"Sky bitmap prefix",
+"Imagens skyaNN.bmp em gp3jamsh\\techjam (troca entre céu de dia e de noite).":"skyaNN.bmp images in gp3jamsh\\techjam (switch between day and night skies).",
+"Bitmap do asfalto":"Tarmac bitmap","Em gp3jamsh\\techjam.":"In gp3jamsh\\techjam.","Desabilitar a barra de progressão":"Disable progress bar",
+"Sessões":"Sessions","Tamanho da corrida rápida":"Quick race length","% da distância real.":"% of the real distance.",
+"Carros no treino livre":"Free practice cars","Carros do computador na pista ao mesmo tempo":"Consecutive computer cars","Nas sessões que não são corrida.":"In non-race sessions.",
+"Probabilidade de chuva":"Probability of rain","Quando o clima é aleatório.":"When the weather is random.",
+"Geral":"General","Habilitar autenticação":"Enable authentication","Marca os tempos de volta para provar que não houve trapaça.":"Signs lap times to prove nothing was cheated.",
+"Mudanças de acerto dentro do carro":"In-car setup changes","Tecla L (acerto no box: \\ [ ]).":"Key L (pit setup: \\ [ ]).",
+"Salvar/restaurar o estado do carro":"Save/restore car state","Backspace.":"Backspace.","Autosave":"Autosave",
+"Mostrar a melhor parcial na qualificação":"Show best split in qualifying","Visão externa no pitlane":"External view in the pit lane","Corrigir o bug do pit stop":"Fix pit stop bug",
+"Esconder o menu de replay":"Hide replay menu","Tempo da tela de fim de corrida":"Race over screen duration",
+"Tabela de tempos (ATL, tecla 9)":"Timing table (ATL, key 9)","Fonte":"Font","Cor do painel":"Panel color","Carros mais rápidos destacados":"Fastest cars highlighted",
+"Log (tecla 2)":"Log (key 2)","Linhas do painel":"Panel lines","Transparência do painel":"Panel opacity","0 = invisível, 255 = opaco.":"0 = invisible, 255 = opaque.",
+"Acerto (tecla L)":"Setup (key L)","Tempo na tela":"Display duration","Mostrar desgaste":"Show wear","Mostrar desgaste na qualificação":"Show wear in qualifying","Mostrar desgaste na corrida":"Show wear in the race",
+"Registro de voltas":"Lap log","Registro de texto das voltas":"Text log of laps","Arquivo":"File","Adicionar ao arquivo":"Append to file",
+"Temperatura do motor":"Engine temperature","Inicial":"Start","Parado (mínima)":"Idle (low)","Parado (máxima)":"Idle (high)","Máxima":"Maximum","Velocidade de mudança":"Change speed",
+"Distância RCR":"RCR distance","Cockpit":"Cockpit","Câmera de bordo":"Onboard camera","Câmera de perseguição":"Chase camera","Câmera da pista":"Track camera",
+"Gráficos de TV":"TV graphics","Modalidade":"Mode","Clássico":"Classic","Digital":"Digital","Digital 2004":"Digital 2004","Digital 2010":"Digital 2010",
+"Mostrar no cockpit":"Show in cockpit","Sem isso os gráficos só aparecem nas câmeras externas.":"Without it the graphics only show in the external cameras.",
+"Microtime ligado ao iniciar":"Microtime on at start","Tecla M.":"Key M.",
+"Tempo das informações de parcial na tela":"Speed trap width","Quanto antes e depois de cada ponto (50 a 100).":"How long before and after each point (50 to 100).",
+"Substituir as mensagens no céu":"Replace sky messages","Substituir também quando “Mostrar no cockpit” está desligado":"Also replace when “Show in cockpit” is off",
+"Volta mais rápida":"Fastest lap","Fora da corrida":"Out of race","Nos boxes":"In the pits","Corrida vencida":"Has won race","Pilotando com":"Riding with","Bandeira preta":"Black flag",
+"Microtime":"Microtime","Posição X":"X position","Posição Y":"Y position","Fontes":"Fonts","Textos 2D":"2D texts",
+"Carros por página na classificação":"Cars per page in the standings",
+"Mapa da pista (tecla 8)":"Track map (key 8)","Mapa da pista":"Track map","Tamanho":"Size","Em 1024x768; ajustado para a resolução.":"At 1024x768; scaled to the resolution.",
+"Mostrar os carros":"Show cars","Mostrar os carros do computador":"Show computer cars","Mostrar as zonas de bandeira amarela":"Show yellow flag zones","Aparecer sozinho com bandeira amarela":"Show automatically on yellow flags","Fundo semitransparente":"Semi-transparent background",
+"Som 3D do motor dos outros carros":"3D engine sound of the other cars","Ativar som 3D do motor":"Enable 3D engine sound","Desabilitar o falso som 3D do GPx":"Disable GPx's fake 3D sound",
+"Arquivo .wav do motor":"Engine .wav file","Distância mínima":"Minimum distance","Distância máxima":"Maximum distance",
+"Frequência: fator por RPM":"Frequency: factor per RPM","Frequência: soma":"Frequency: offset","Volume: fator por RPM":"Volume: factor per RPM","Volume: soma":"Volume: offset",
+"Sirene do box":"Pit siren","Ativar som 3D da sirene do box":"Enable 3D pit siren sound","Arquivo .wav da sirene":"Siren .wav file",
+"Sons de eventos":"Event sounds","Ativar os sons 2D de eventos":"Enable 2D event sounds","Volume geral":"Global volume","Arquivo de eventos (em gpxpdata/snd)":"Event sound file (in gpxpdata/snd)",
+"Avançado":"Advanced","Fator de distância":"Distance factor","Fator de atenuação":"Rolloff factor","Fator Doppler":"Doppler factor",
+"Teclas":"Keys","Vídeo e jogo (GP3RT)":"Video and game (GP3RT)","Vídeo":"Video","Tela":"Display","Tela cheia":"Fullscreen","Janela":"Window","Alt+Enter alterna durante o jogo.":"Alt+Enter toggles while playing.",
+"Tamanho da janela":"Window size","Placa de vídeo":"Graphics card","Automático (dedicada se houver duas)":"Automatic (dedicated if there are two)","Sempre a dedicada":"Always the dedicated one","Sempre a integrada":"Always the integrated one","Não mexer":"Leave it alone",
+"Resolução interna do 3D":"3D internal resolution","Automático":"Automatic","1x (original)":"1x (original)","Filtragem anisotrópica":"Anisotropic filtering","Desligada":"Off",
+"Filtragem bilinear nas texturas":"Bilinear texture filtering","Sincronizar com o monitor (vsync)":"Sync with the monitor (vsync)","Opacidade do spray e da fumaça":"Spray and smoke opacity","100 = original do GP3.":"100 = GP3's original.",
+"Widescreen":"Widescreen","Largura":"Width","-1 = do monitor; 0 = desligado. Escolha 1280x1024 no menu do jogo.":"-1 = the monitor's; 0 = off. Pick 1280x1024 in the game's menu.","Altura":"Height",
+"Campo de visão Hor+":"Hor+ field of view","Mais imagem dos lados, sem esticar.":"More picture at the sides, without stretching.","Ajuste do campo de visão":"Field of view adjustment",
+"Teclado numérico":"Numeric keypad","Segue o NumLock (como no Windows)":"Follows NumLock (like Windows)","Sempre Home/End/PgUp/PgDn":"Always Home/End/PgUp/PgDn","Sempre números":"Always numbers",
+"Som 3D (DirectSound3D)":"3D sound (DirectSound3D)","Usado pelo GP3 2000 e pelo GPxSound.":"Used by GP3 2000 and GPxSound.","Teclas do replay do GP3 2000 (GP3 1.13)":"GP3 2000 replay keys (GP3 1.13)","F1 a F9 no replay: voltas, pausa, câmera lenta, voltar e avançar. Shift+F1: largada; Shift+F2: fim.":"F1 to F9 in the replay: laps, pause, slow motion, rewind and fast forward. Shift+F1: start; Shift+F2: end.","Legenda das teclas no replay":"Replay key legend","Mostra F1 a F9 embaixo da tela.":"Shows F1 to F9 at the bottom of the screen.","Spray e fumaça no replay (GP3 1.13)":"Spray and smoke in the replay (GP3 1.13)","Não somem mais depois de voltar o replay.":"No longer disappear after rewinding the replay.","Replay da corrida inteira (GP3 1.13)":"Whole-race replay (GP3 1.13)","Carrega o GP3Replay.dll quando ele está na pasta do jogo.":"Loads GP3Replay.dll when it is in the game folder.","Replay de 2 horas (GP3 2000)":"2-hour replay (GP3 2000)","Length of replay até 2:00:00.":"Length of replay up to 2:00:00.",
+"Austrália":"Australia","Brasil":"Brazil","Argentina":"Argentina","San Marino":"San Marino","Espanha":"Spain","Mônaco":"Monaco","Canadá":"Canada","França":"France","Grã-Bretanha":"Great Britain","Áustria":"Austria","Alemanha":"Germany","Hungria":"Hungary","Bélgica":"Belgium","Itália":"Italy","Luxemburgo":"Luxembourg","Japão":"Japan","Europa":"Europe","EUA":"USA","Malásia":"Malaysia",
+"Salvar como novo…":"Save as new…","Nome do novo conjunto de pistas (ex.: temporada1998):":"Name of the new track set (e.g. season1998):",
+"Já existe um conjunto com esse nome.":"A track set with that name already exists.","Conjunto “{0}” criado. As mudanças agora vão para ele.":"Track set “{0}” created. Changes now go to it.",
+"Conjunto de pistas":"Track set","Conjunto em uso":"Track set in use","Arquivos .set da pasta gpxpdata: um para cada temporada ou categoria.":".set files in the gpxpdata folder: one per season or category.",
+"(pista original)":"(original track)","Escolher um .dat em qualquer pasta":"Pick a .dat in any folder","Pista":"Track",
+"A pasta circuits tem um único arquivo .ini ({0}). O GPx usa esse .ini para todas as pistas modificadas dessa pasta, e por isso várias etapas aparecem com o mesmo nome. Deixe cada pista da comunidade (.dat, .ini e arquivos dela) numa pasta própria, por exemplo “pistas\\Donington”, e escolha o .dat aqui com “Procurar…”.":"The circuits folder has a single .ini file ({0}). GPx uses that .ini for every modified track in that folder, which is why several rounds show the same name. Keep each community track (.dat, .ini and its files) in its own folder, e.g. “tracks\\Donington”, and pick the .dat here with “Browse…”.",
+"Seleção de pistas ({0})":"Track selection ({0})",
+"Escolha o arquivo .dat de cada etapa: na lista (os .dat da pasta do jogo) ou com “Procurar…”, em qualquer pasta do computador. O nome e o país vêm do .ini que fica junto do .dat.":"Pick the .dat file of each round: from the list (the .dat files in the game folder) or with “Browse…”, in any folder. The name and country come from the .ini next to the .dat.",
+"Limites estendidos":"Extended limits","Comprimento máximo da pista":"Maximum track length","8 km (original)":"8 km (original)","Use o menor valor que suas pistas precisam.":"Use the smallest value your tracks need.",
+"Voltas máximas na corrida":"Maximum race laps","99 (original)":"99 (original)","Menus":"Menus","Mostrar nos menus o nome, país e recordes das pistas":"Catch menu strings (track name, country and records)",
+"Capturar recordes":"Catch records","Sobrescreve recordes antigos do mesmo slot.":"Overwrites older records of the same slot.",
+"Nenhum painel configurado.":"No panels configured.","Adicionar painel…":"Add panel…","Painéis":"Panels","Novo painel":"New panel","Os painéis ficam em gpxpdata/pnl.":"Panels are in gpxpdata/pnl.",
+"Exportar":"Export","Exportar os dados do carro":"Export car data",
+"O editor visual de painéis do Windows não existe aqui: para mudar o desenho de um painel, edite o .ini dele em gpxpdata/pnl.":"The Windows visual panel editor is not available here: to change how a panel looks, edit its .ini in gpxpdata/pnl.",
+"Painel: aumentar":"Panel: bigger","Painel: diminuir":"Panel: smaller","Painel: subir":"Panel: up","Painel: descer":"Panel: down","Painel: página acima":"Panel: page up","Painel: página abaixo":"Panel: page down",
+"Painel: início":"Panel: home","Painel: fim":"Panel: end","Painel: travar":"Panel: lock","Painel: mais transparente":"Panel: more transparent","Painel: menos transparente":"Panel: less transparent","Captura de tela":"Screenshot",
+"TV: mostrar/esconder tudo":"TV: show/hide all","TV: parciais / velocidade":"TV: splits / speed","TV: classificação":"TV: standings","TV: torre embaixo":"TV: bottom tower","TV: torre da esquerda":"TV: left tower",
+"TV: próxima página":"TV: next page","TV: tempo restante / voltas":"TV: time left / laps","TV: microtime":"TV: microtime","TV: microtime, comparação":"TV: microtime compare","TV: microtime, relativo/absoluto":"TV: microtime relative/absolute",
+"TV: director's cut":"TV: director's cut","TV: mapa de informações":"TV: info screen","TV: mapa da pista":"TV: track map",
+"Lap: limpar página":"Lap: clear page","Lap: log":"Lap: log","Lap: tabela de tempos":"Lap: timing table","Lap: modo da página":"Lap: page mode","Lap: modo da página 2":"Lap: page mode 2","Lap: hotseat":"Lap: hotseat jump",
+"Lap: salvar estado do carro":"Lap: save car state","Lap: restaurar estado do carro":"Lap: restore car state","Lap: quicksave":"Lap: quicksave",
+"Lap: menu de acerto":"Lap: setup menu","Lap: menu de acerto no box":"Lap: pit setup menu","Lap: acerto no box, escolher":"Lap: pit setup select","Lap: acerto no box, descer":"Lap: pit setup down","Lap: acerto no box, subir":"Lap: pit setup up",
+"CInfo: mostrar/esconder":"CInfo: show/hide",
+"Jogo: replay":"Game: replay","Jogo: câmera da pista":"Game: track camera","Jogo: cockpit":"Game: cockpit","Jogo: câmera de perseguição (frente)":"Game: chase camera (front)","Jogo: câmera de perseguição (trás)":"Game: chase camera (rear)",
+"Jogo: câmera de bordo":"Game: onboard camera","Jogo: zoom +":"Game: zoom in","Jogo: zoom −":"Game: zoom out","Jogo: zoom normal":"Game: zoom reset","Jogo: câmera para cima":"Game: camera up",
+"Jogo: câmera para baixo":"Game: camera down","Jogo: câmera normal":"Game: camera reset","Jogo: nome do piloto":"Game: driver name","Jogo: diferença":"Game: gap","Jogo: sair":"Game: quit run",
+"Jogo: box":"Game: pit","Jogo: PO":"Game: processor occupancy","Jogo: modo diretor (TV)":"Game: director mode (TV)","Jogo: seu carro":"Game: own car","Jogo: próximo carro":"Game: next car","Jogo: carro anterior":"Game: previous car",
+"Ajuda: freio automático":"Help: auto brake","Ajuda: câmbio automático":"Help: auto gears","Ajuda: direção automática":"Help: auto steering","Ajuda: indestrutível":"Help: indestructible",
+"Ajuda: linha ideal":"Help: suggested line","Ajuda: marcha sugerida":"Help: suggested gear","Ajuda: controle de tração":"Help: traction control","Ajuda: direção assistida":"Help: steering help","Ajuda: largada":"Help: launch control",
+"Controle: direita":"Control: steer right","Controle: esquerda":"Control: steer left","Controle: freio":"Control: brake","Controle: acelerador":"Control: throttle","Controle: subir marcha":"Control: shift up","Controle: descer marcha":"Control: shift down",
+"gpxpdata/keys.ini ainda não existe: ele é criado na primeira vez que o jogo roda com o GPxPatch. Inicie o jogo uma vez e volte aqui.":"gpxpdata/keys.ini does not exist yet: it is created the first time the game runs with GPxPatch. Start the game once and come back here.",
+"Clique e aperte a nova tecla (Esc cancela)":"Click and press the new key (Esc cancels)","aperte…":"press…","Essa tecla não pode ser usada pelo GPx.":"GPx cannot use that key.",
+"Teclas de atalho (gpxpdata/keys.ini)":"Key binds (gpxpdata/keys.ini)",
+"Clique na tecla e aperte a nova. Em amarelo: tecla usada por mais de uma ação. As teclas “Jogo:” e “Controle:” também mudam as teclas do próprio GP3.":"Click a key and press the new one. Yellow: key used by more than one action. The “Game:” and “Control:” keys also change GP3's own keys.",
+"Nenhuma fonte definida (o GPx usa as padrão).":"No fonts defined (GPx uses its defaults).","Nome da fonte":"Face name",
+"Ex.: Courier New, Arial. No Linux é trocada pela equivalente (Liberation).":"E.g. Courier New, Arial. On Linux it is replaced by the equivalent (Liberation).",
+"Arquivo da fonte":"Font file","(fonte do sistema)":"(system font)","Peso":"Weight","Regular":"Regular","Negrito":"Bold","Itálico":"Italic","Espaço entre linhas":"Line spacing",
+"nome da nova fonte":"new font name","Adicionar":"Add","Nova fonte":"New font","Depois escolha-a nas abas GPxLap e GPxSAT.":"Then pick it in the GPxLap and GPxSAT tabs.",
+"Fontes do GPxPatch (gpxpdata/fonts.ini)":"GPxPatch fonts (gpxpdata/fonts.ini)",
+"GPxPatch para Linux":"GPxPatch for Linux","para Linux":"for Linux","Idioma":"Language","Iniciar com GPxPatch":"Start with GPxPatch","Iniciar sem GPxPatch":"Start without GPxPatch",
+"O GPxPatch não está instalado nesta pasta. Baixe o GPxPatch 4.52 em www.sdidit.nl, instale (pelo Wine ou num PC com Windows) e deixe o GPxPSup.dll e a pasta gpxpdata na pasta do jogo (veja o README / LEIAME). Depois abra esta tela de novo.":"GPxPatch is not installed in this folder. Download GPxPatch 4.52 from www.sdidit.nl, install it (with Wine or on a Windows PC) and put GPxPSup.dll and the gpxpdata folder in the game folder (see the README). Then open this screen again.",
+"Falta o arquivo GPxPSup.dll na pasta do jogo: sem ele o GPxPatch não carrega.":"GPxPSup.dll is missing from the game folder: GPxPatch does not load without it.",
+"Jogo em execução…":"Game running…","Não foi possível iniciar o jogo (veja gp3linux-gpxpatch.log).":"The game could not be started (see gp3linux-gpxpatch.log).",
+"O jogo fechou com erro ({0}). Veja gp3linux-game.log na pasta do jogo.":"The game closed with an error ({0}). See gp3linux-game.log in the game folder.",
+"Jogo encerrado.":"Game ended.","O GP3RT foi fechado. Abra de novo pelo atalho “GPxPatch”.":"GP3RT was closed. Open it again from the “GPxPatch” shortcut.",
+};
+load().catch(e => { document.getElementById("main").textContent = "Não foi possível falar com o GP3RT / Cannot talk to GP3RT. Feche esta aba e abra pelo atalho “GPxPatch” / Close this tab and open it from the “GPxPatch” shortcut."; });
+</script>
+</body>
+</html>

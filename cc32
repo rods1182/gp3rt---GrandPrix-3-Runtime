@@ -1,0 +1,6 @@
+#!/bin/sh
+# static i386 musl compiler wrapper
+M=$(cd "$(dirname "$0")" && pwd)/deps/musl32
+R=$(clang -print-resource-dir)
+case " $* " in *" -c "*) exec clang -m32 -nostdinc -isystem $M/include -isystem $R/include "$@";; esac
+exec clang -m32 -static -nostdinc -isystem $M/include -isystem $R/include -nostdlib $M/lib/crt1.o $M/lib/crti.o "$@" $M/lib/libc.a $M/lib/libclang_rt.builtins-i386.a $M/lib/crtn.o

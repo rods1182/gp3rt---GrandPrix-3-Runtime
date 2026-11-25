@@ -1,0 +1,27 @@
+#include <winver.h>
+1 ICON "gpxpatch.ico"
+1 24 "app.manifest"
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEOS 0x40004
+ FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "041604b0"
+    BEGIN
+      VALUE "CompanyName", "GP3RT"
+      VALUE "FileDescription", "GPxPatch GP3RT - configuracao do GPxPatch"
+      VALUE "FileVersion", "1.0.0"
+      VALUE "ProductName", "GPxPatch GP3RT"
+      VALUE "ProductVersion", "1.0.0"
+      VALUE "OriginalFilename", "GPxPatch GP3RT.exe"
+      VALUE "LegalCopyright", "GP3RT. GPxPatch (c) Rene Smit."
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x416, 1200
+  END
+END

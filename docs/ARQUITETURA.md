@@ -19,4 +19,4 @@ Este documento descreve o snapshot recebido; não certifica segurança, desempen
 
 ## Escopo da publicação
 
-Esta pasta contém os fontes usados pelo build Windows e headers compartilhados do snapshot. Arquivos exclusivos do host/loader Linux, seus scripts e ferramentas de outros projetos foram deixados fora. O projeto Linux ainda está em desenvolvimento e terá publicação separada.
+A pasta `src/` contém os fontes da `ddraw.dll` do Windows e do núcleo da edição Linux (os mesmos arquivos nos dois); `host/` contém o carregador Linux (`gp3`, `gp3-game`) e a tela do GPxPatch.

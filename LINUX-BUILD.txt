@@ -1,0 +1,30 @@
+Building GP3RT for Linux
+========================
+
+Two programs:
+  gp3       64-bit host (SDL2 + OpenGL), dynamically linked against glibc and libSDL2
+  gp3-game  32-bit static game process (musl libc), no runtime dependencies
+
+Requirements
+  - clang (with the i386 target) and gcc
+  - musl 1.2.5 built for i386 with clang -m32 into deps/musl32:
+        cd deps/musl-src && CC="clang -m32" ./configure --prefix=$PWD/../musl32 --target=i386 --disable-shared
+        make -j && make install
+    plus libclang_rt.builtins-i386.a copied to deps/musl32/lib (from the
+    compiler-rt of your clang)
+  - SDL2 development files (libsdl2-dev); point SDL2_PREFIX at a prefix with
+    include/SDL2 and lib/libSDL2.so if they are not in the default location
+
+Build
+  ./build_linux.sh            -> build/linux/gp3, build/linux/gp3-game
+  ./build.sh                  -> build/gp3run (headless test runner)
+  ./build_win.sh              -> build/win/ddraw.dll (Windows)
+  ./build_gp3replay.sh        -> build/win/GP3Replay.dll (whole-race replay for
+                                 GP3 1.13; the same file on Windows and Linux)
+
+Layout
+  src/        shared runtime: PE loader, Win32/DirectX layer, renderers
+  src/bridge.h       shared-memory protocol between gp3 and gp3-game
+  src/plat_bridge.c  game-process side (remote renderer, input, audio)
+  host/       the 64-bit host (window, GL, audio, joysticks/force feedback)
+  src/win/    Windows ddraw.dll specific code
