@@ -1,4 +1,4 @@
-# Windows user guide — GP3RT 1.2.0
+# Windows user guide — GP3RT 1.2.1
 
 ## Requirements and installation
 
@@ -20,7 +20,7 @@ Version 1.1.0 adds sound_lock_fix=1 (on by default, GP3 2000 only): GP3 2000's 3
 
 On GP3 1.13, copy the optional GP3Replay.dll next to ddraw.dll: the replay then keeps the whole race (over 2 hours), with no separate executable. It replaces GP3 Video's gp3v.exe (start the game directly) and was inspired by Rafa's Gp3Video. Gp3.exe is not modified on disk.
 
-GP3 2000-style replay keys on GP3 1.13 (replay_keys=1, legend with replay_legend=1): F1/F2 previous/next lap, F3 or P play/pause, F4 slow motion, F5/F8 rewind/fast forward while held, F6/F7 one frame back/forward, F9 show/hide the legend. In the race, P pauses and R opens the replay already playing from the start of the lap; the replay ends where you paused, and P resumes the race. replay_fx_fix=1 keeps rain spray and smoke after rewinding. On GP3 2000, replay_2h=1 lets "Length of replay" go up to 2 hours.
+GP3 2000-style replay keys on GP3 1.13 (replay_keys=1, legend with replay_legend=1): F1/F2 previous/next lap, F3 or P play/pause, F4 slow motion, F5/F8 rewind/fast forward while held, F6/F7 one frame back/forward, F9 show/hide the legend, Shift+F1 start of the race, Shift+F2 where the race stopped. After loading a saved race the replay still reaches the start: it uses the snapshots GP3Replay.dll keeps in the save. In the race, P pauses and R opens the replay already playing from the start of the lap; the replay ends where you paused, and P resumes the race. replay_fx_fix=1 keeps rain spray and smoke after rewinding. On GP3 2000, replay_2h=1 lets "Length of replay" go up to 2 hours.
 
 ## Configuration
 

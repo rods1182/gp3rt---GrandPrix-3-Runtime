@@ -8,9 +8,9 @@ An independent project by Rodrigo Motta (Rods), developed with Claude (Anthropic
 
 ## Download and status
 
-Open **Releases** and download **GP3RT-1.2.0-Windows.zip**. GitHub's automatic **Source code** archives do not contain the ready-to-use DLL.
+Open **Releases** and download **GP3RT-1.2.1-Windows.zip**. GitHub's automatic **Source code** archives do not contain the ready-to-use DLL.
 
-The supplied Windows DLL identifies as version 1.2.0 and targets GP3 1.13 and GP3 2000 on Windows 10/11. This repository is Windows-only. The Linux version is [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), in its own repository. Documentation was prepared through static inspection; no game execution or rebuild was performed.
+The supplied Windows DLL identifies as version 1.2.1 and targets GP3 1.13 and GP3 2000 on Windows 10/11. This repository is Windows-only. The Linux version is [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), in its own repository. Documentation was prepared through static inspection; no game execution or rebuild was performed.
 
 ## Features
 

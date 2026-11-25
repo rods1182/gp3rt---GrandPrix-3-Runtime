@@ -2,6 +2,12 @@
 
 Resumo do histórico distribuído com o pacote; sem datas de lançamento confirmadas e sem criar mudanças fictícias.
 
+## 1.2.1
+
+- Replay depois de carregar uma corrida salva (GP3 1.13): voltava só até o ponto do carregamento, porque as fotos de 1 em 1 segundo ficam só na memória. O save do GP3Replay.dll guarda também as fotos do próprio GP3 (uma a cada ~32 s) e o buffer de comandos inteiro; ao abrir o replay, a parte que falta é tirada delas, e as fotos de 1 segundo são refeitas enquanto o replay passa pelo trecho (conferido passo a passo com a corrida). Relatado por Stephan Séguin.
+- Apertar R logo depois de carregar o save (corrida parada, sem P antes) deixava o replay preso voltando (F5 aceso): o relógio da corrida só era anotado com a corrida andando. Agora é anotado a cada quadro.
+- Teclas novas no replay: Shift+F1 (largada) e Shift+F2 (ponto em que a corrida parou, pausado). O GP3 e o GPxPatch não usam essas combinações; as duas estão na legenda.
+
 ## 1.2.0
 
 - **GP3Replay.dll** (GP3 1.13): replay da corrida inteira (mais de 2 horas) sem um executável à parte. Substitui o GP3 Video (gp3v.exe): a mesma ampliação do buffer de replay é feita na memória quando o jogo abre, com relocação do código; o Gp3.exe não é alterado e a mesma DLL serve ao Windows e ao Linux. Se o executável já tiver o replay ampliado ou não for o GP3 1.13, nada é alterado (`gp3replay`, padrão 1). Inspirado no Gp3Video, do Rafa.

@@ -8,9 +8,9 @@ S3 = S
 S = S * K
 FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf'
 f = ImageFont.truetype(FONT, int(9 * S))
-items = [('F1', 'lapb', 'lap'), ('F2', 'lapf', 'lap'), ('F3', 'playpause', ''), ('F4', 'play', 'slow'), ('F5', 'rew', ''),
+items = [('⇧F1', 'start', ''), ('F1', 'lapb', 'lap'), ('F2', 'lapf', 'lap'), ('⇧F2', 'end', ''), ('F3', 'playpause', ''), ('F4', 'play', 'slow'), ('F5', 'rew', ''),
          ('F6', 'stepb', ''), ('F7', 'stepf', ''), ('F8', 'ff', ''), ('F9', '', 'hide')]
-H = int(15 * S); pad = 5 * S; gap = 7 * S; icon_w = {'': 0, 'lapb': 16, 'lapf': 16, 'playpause': 14, 'rew': 11, 'stepb': 9, 'start': 11, 'pause': 7, 'play': 6, 'stepf': 9, 'ff': 11, 'end': 11}
+H = int(15 * S); pad = 4 * S; gap = 4.5 * S; icon_w = {'': 0, 'lapb': 16, 'lapf': 16, 'playpause': 14, 'rew': 11, 'stepb': 9, 'start': 11, 'pause': 7, 'play': 6, 'stepf': 9, 'ff': 11, 'end': 11}
 def icon(d, kind, x, cy, col):
     h = 3.4 * S
     def tri(x0, right):   # triangle 5 px wide

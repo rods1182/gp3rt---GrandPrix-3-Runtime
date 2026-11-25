@@ -1,4 +1,4 @@
-# Referência do gp3rt.ini — 1.2.0
+# Referência do gp3rt.ini — 1.2.1
 
 Valores abaixo copiados do INI fornecido. São os valores **distribuídos**, não uma auditoria de todos os padrões internos quando uma chave é omitida. Feche o jogo antes de editar.
 
@@ -31,7 +31,7 @@ Valores abaixo copiados do INI fornecido. São os valores **distribuídos**, nã
 | `str_guard` | `1` | 1 habilita proteção da tabela de strings no GP3 1.13 reconhecido. |
 | `edge_fix` | `1` | 1 amplia o limite de geometria por quadro do jogo (2.999 → 16.000 bordas, área de trabalho 100 KB → 2 MB) e impede o fechamento quando esse limite estoura. GP3 1.13 e GP3 2000. |
 | `sound_lock_fix` | `1` | GP3 2000: corrige na memória a "trava" do som 3D que deixava o jogo fechar em corridas longas (gp3_2000.exe+0x13d49b) em processadores de vários núcleos. |
-| `replay_keys` | `1` | GP3 1.13: teclas do replay do GP3 2000 (F1 a F9): voltas, play/pausa, câmera lenta, voltar/avançar suaves, quadro a quadro. Guarda uma foto da corrida por segundo (~10 KB). |
+| `replay_keys` | `1` | GP3 1.13: teclas do replay do GP3 2000 (F1 a F9): voltas, play/pausa, câmera lenta, voltar/avançar suaves, quadro a quadro. Guarda uma foto da corrida por segundo (~10 KB). Shift+F1 vai para a largada; Shift+F2, para o ponto em que a corrida parou. |
 | `replay_legend` | `1` | Mostra a legenda das teclas F1 a F9 embaixo da tela no replay (F9 alterna). |
 | `replay_fx_fix` | `1` | GP3 1.13: o spray da chuva e a fumaça não somem mais depois de voltar o replay. |
 | `replay_2h` | `1` | GP3 2000: o controle "Length of replay" vai até 2:00:00 (o jogo para em 1:30:00). |

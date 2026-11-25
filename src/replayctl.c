@@ -3,6 +3,8 @@
  *   F1 previous lap    F2 next lap       F3 play / pause    F4 slow motion (held)
  *   F5 rewind (held)   F6 step back      F7 step forward    F8 fast forward (held)
  *   F9 show / hide the legend
+ *   Shift+F1 start of the race    Shift+F2 where the race was paused
+ *   (Home/End, Page Up/Down etc. are GP3 cameras; Shift+F-keys are used by neither GP3 nor GPxPatch)
  *
  * GP3 2000 keeps a snapshot of the race every few seconds and moves through them; 1.13 only
  * keeps a handful. Here, during the race, a snapshot is stored every second (packed: about
@@ -134,23 +136,43 @@ static void put(const uint8_t *d) {
     *(volatile uint16_t *)(uintptr_t)0xb27a2a = *(volatile uint16_t *)(uintptr_t)0xb94026;
     game_call(0x47f02c); game_call(0x43b897);
 }
+static int st_alloc(void) {   /* buffers and room for one more entry; 0 = store unusable */
+    if (g_st_off) return 0;
+    if (!g_slen) { g_slen = *(volatile uint32_t *)(uintptr_t)0xbb34f4; if (g_slen < 0x8000 || g_slen > 0x10000) { g_st_off = 1; return 0; } }
+    uint32_t n = g_slen + 0x100;
+    if (!g_cur) { g_cur = malloc(n); g_tmp = malloc(n * 2 + 64); if (!g_cur || !g_tmp) { g_st_off = 1; return 0; } }
+    if (g_st_n == g_st_cap) {
+        int nc = g_st_cap ? g_st_cap * 2 : 1024; snap_t *ns = realloc(g_st, nc * sizeof *ns);
+        if (!ns) { g_st_off = 1; return 0; } g_st = ns; g_st_cap = nc;
+    }
+    return 1;
+}
+static int st_find(int32_t t);
+#ifndef GP3_WIN
+static snap_t *g_vs; static int g_vs_n;   /* test only */
+#endif
+static int32_t g_forget_at = -1;   /* test: forget the store at this race time, as after loading a saved race */
 static void st_live(int32_t c) {
     if (g_st_off || g_cap_ms < 60000) return;
     if (c < g_live_last - 2000) st_reset();                        /* a new session */
+    if (g_forget_at >= 0 && c >= g_forget_at) {
+        g_forget_at = -1;
+#ifndef GP3_WIN
+        if (getenv("GP3_RC_VERIFY")) { g_vs = malloc(g_st_n * sizeof *g_vs); for (int i = 0; i < g_st_n; i++) { g_vs[i] = g_st[i]; g_vs[i].data = malloc(g_st[i].len); memcpy(g_vs[i].data, g_st[i].data, g_st[i].len); } g_vs_n = g_st_n; }
+#endif
+        st_reset(); LOG("replay keys: test: store forgotten at %d s", c / 1000);
+    }
     g_live_last = c;
     int32_t sec = c / 1000;
     if (sec == g_st_lastsec) return;
-    if (!g_slen) { g_slen = *(volatile uint32_t *)(uintptr_t)0xbb34f4; if (g_slen < 0x8000 || g_slen > 0x10000) { g_st_off = 1; return; } }
+    if (!st_alloc()) return;
     uint32_t n = g_slen + 0x100;
-    if (!g_cur) { g_cur = malloc(n); g_tmp = malloc(n * 2 + 64); if (!g_cur || !g_tmp) { g_st_off = 1; return; } }
-    if (g_st_n == g_st_cap) {
-        int nc = g_st_cap ? g_st_cap * 2 : 1024; snap_t *ns = realloc(g_st, nc * sizeof *ns);
-        if (!ns) { g_st_off = 1; return; } g_st = ns; g_st_cap = nc;
-    }
-    /* keep only what the input buffer can still play: drop entries older than it (keyframe groups) */
-    while (g_st_n > KEYEVERY * 2 && g_st[KEYEVERY].t < c - g_cap_ms + 5000) {
-        for (int i = 0; i < KEYEVERY; i++) { g_st_bytes -= g_st[i].len; free(g_st[i].data); }
-        memmove(g_st, g_st + KEYEVERY, (g_st_n - KEYEVERY) * sizeof *g_st); g_st_n -= KEYEVERY; if (g_st_key >= 0) g_st_key -= KEYEVERY;
+    /* keep only what the input buffer can still play: drop entries older than it (up to a keyframe) */
+    for (;;) {
+        int m = KEYEVERY; while (m < g_st_n && !g_st[m].key) m++;
+        if (m >= g_st_n - KEYEVERY || g_st[m].t >= c - g_cap_ms + 5000) break;
+        for (int i = 0; i < m; i++) { g_st_bytes -= g_st[i].len; free(g_st[i].data); }
+        memmove(g_st, g_st + m, (g_st_n - m) * sizeof *g_st); g_st_n -= m; if (g_st_key >= 0) g_st_key -= m;
     }
     if (g_st_bytes > (size_t)300 << 20) { g_st_off = 1; LOG("replay keys: store full (%u MB)", (unsigned)(g_st_bytes >> 20)); return; }
     grab(g_cur);
@@ -164,6 +186,71 @@ static void st_live(int32_t c) {
     g_st_bytes += e->len;
     if (e->lap > g_lapmax) { if (g_nlaps < 512) g_laps[g_nlaps++] = c; g_lapmax = e->lap; }
     g_st_n++; g_st_lastsec = sec;
+}
+/* lap markers from the store: where the leader's lap goes up. After a gap (entries taken from
+   GP3's own snapshots, ~32 s apart) the marker goes on the entry before, so a jump lands before
+   the line and plays into the new lap. */
+static void laps_rebuild(void) {
+    g_nlaps = 0; g_lapmax = 0;
+    for (int i = 0; i < g_st_n; i++) if (g_st[i].lap > g_lapmax) {
+        g_lapmax = g_st[i].lap;
+        if (i > 0 && g_nlaps < 512) g_laps[g_nlaps++] = g_st[i].t - g_st[i - 1].t > 1500 ? g_st[i - 1].t : g_st[i].t;
+    }
+}
+/* put e at index at (room checked by st_alloc) */
+static void st_insert(int at, const snap_t *e) {
+    memmove(g_st + at + 1, g_st + at, (g_st_n - at) * sizeof *g_st);
+    g_st[at] = *e; g_st_n++; g_st_bytes += e->len;
+    if (g_st_key >= at) g_st_key++;
+}
+/* After loading a saved race the store only starts there, but GP3Replay's save keeps the whole
+   replay: the input buffer and GP3's own snapshots (one every ~32 s, same form as ours, in the
+   slots GP3Replay.dll gave it). When the replay starts, the part the store lacks is taken from
+   those snapshots; then, as the replay plays through it, one entry per second is added
+   (st_fill), so rewind and laps get as fine as in a race watched without loading. */
+static void st_backfill(void) {
+    if (g_cap_ms < 60000 || !st_alloc()) return;
+    uint32_t base = *(volatile uint32_t *)(uintptr_t)0x47e7ca;                  /* GP3's snapshot slots (moved by GP3Replay.dll) */
+    int32_t maxk = *(volatile int32_t *)(uintptr_t)0xb9fa38, hik = *(volatile int32_t *)(uintptr_t)0xb9fab4;
+    if (*(volatile uint8_t *)(uintptr_t)0x47e7c9 != 0xbe || maxk < 3 || hik < 3 || hik > 1000) return;
+    if (maxk > hik) maxk = hik;
+    int32_t first = g_st_n ? g_st[0].t : g_end + 1, lo_t = g_end - g_cap_ms;
+    uint32_t n = g_slen + 0x100; int got = 0;
+    for (int k = 3; k <= maxk; k++) {
+        const uint8_t *src = (const uint8_t *)(uintptr_t)(base + *(volatile uint32_t *)(uintptr_t)(0xbb34fc + 4 * k));
+        int32_t t = *(const int32_t *)(src + 0x40);
+        if (t < lo_t || t > g_end || t > first - 1500) continue;
+        int i = st_find(t); if (i >= 0 && g_st[i].t == t) continue;
+        if (!st_alloc()) break;
+        snap_t e = { t, 0, 1, n, malloc(n) }; if (!e.data) break;
+        memcpy(e.data, src, n);
+        uint8_t m = 0; for (int j = 0; j < 22; j++) { uint8_t v = e.data[0xb9556a - 0xb93f84 + j]; if (v > m && v < 200) m = v; } e.lap = m;
+        st_insert(i + 1, &e); got++;
+    }
+    if (got) { laps_rebuild(); LOG("replay keys: %d of GP3's snapshots added to the store (from %d s; the store started at %d s)", got, g_st[0].t / 1000, first / 1000); }
+}
+/* in the replay, at the point the store takes its entries: fill a gap with one entry per second */
+static void st_fill(int32_t c) {
+    if (g_st_off || g_st_n < 1 || c < g_end - g_cap_ms || c > g_end) return;
+    int i = st_find(c);
+    if (i < 0) { if (g_st[0].t - c < 1500) return; }
+    else {
+        if (g_st[i].t / 1000 == c / 1000 || i + 1 >= g_st_n) return;
+        if (g_st[i + 1].t - g_st[i].t <= 1500 || g_st[i + 1].t / 1000 == c / 1000) return;
+    }
+    if (!st_alloc()) return;
+    uint32_t n = g_slen + 0x100;
+    grab(g_cur);
+    int k = i; while (k >= 0 && !g_st[k].key) k--;
+    /* a new keyframe only where it is nobody's base: the next entry is a keyframe too (or none) */
+    int key = (k < 0 || i - k >= KEYEVERY - 1) && (i + 1 >= g_st_n || g_st[i + 1].key);
+    if (k < 0 && !key) return;
+    snap_t e = { c, lap_leader(), (uint8_t)key, 0, NULL };
+    if (key) { e.len = n; e.data = malloc(n); if (e.data) memcpy(e.data, g_cur, n); }
+    else { e.len = pack(g_st[k].data, g_cur, n, g_tmp); e.data = malloc(e.len); if (e.data) memcpy(e.data, g_tmp, e.len); }
+    if (!e.data) { g_st_off = 1; return; }
+    st_insert(i + 1, &e);
+    if (e.lap != (i >= 0 ? g_st[i].lap : 0) || (i + 2 < g_st_n && g_st[i + 2].lap != e.lap)) laps_rebuild();
 }
 /* entries usable in this replay: [lo, hi] */
 static int st_range(int *lo, int *hi) {
@@ -179,6 +266,26 @@ static int st_find(int32_t t) {   /* last entry with time <= t, or -1 */
     while (l <= h) { int m = (l + h) / 2; if (g_st[m].t <= t) { r = m; l = m + 1; } else h = m - 1; }
     return r;
 }
+#ifndef GP3_WIN
+/* test (GP3_RC_FORGET=<ms> GP3_RC_VERIFY=1): the store is kept aside when forgotten, and every
+   replay step at one of its times is compared with it */
+static int g_vf_n, g_vf_bad, g_vf_max;
+static void rc_verify(int32_t c) {
+    if (!g_vs_n || !g_cur) return;
+    int l = 0, h = g_vs_n - 1, r = -1;
+    while (l <= h) { int m = (l + h) / 2; if (g_vs[m].t <= c) { r = m; l = m + 1; } else h = m - 1; }
+    if (r < 0 || g_vs[r].t != c) return;
+    uint32_t n = g_slen + 0x100; static uint8_t *ref; if (!ref) ref = malloc(n);
+    int k = r; while (k > 0 && !g_vs[k].key) k--;
+    memcpy(ref, g_vs[k].data, n); if (k != r) unpack(g_vs[r].data, ref);
+    grab(g_tmp);
+    int d = 0, first = -1; for (uint32_t j = 0; j < n; j++) if (ref[j] != g_tmp[j]) { d++; if (first < 0) first = j; }
+    g_vf_n++; if (d > 32) g_vf_bad++; if (d > g_vf_max) g_vf_max = d;
+    if (d > 32 || (g_vf_n % 50) == 0) LOG("replay keys: test: %d s: %d bytes differ (first at +0x%x); checked %d, bad %d, max %d", c / 1000, d, first, g_vf_n, g_vf_bad, g_vf_max);
+}
+#else
+static void rc_verify(int32_t c) { (void)c; }
+#endif
 static void st_restore(int i) {
     int k = i; while (k > 0 && !g_st[k].key) k--;
     memcpy(g_cur, g_st[k].data, g_slen + 0x100);
@@ -211,7 +318,9 @@ __attribute__((used)) void rc_gate(void) {
         return;
     }
     if (!g_end) {                       /* the replay starts: it ends where the race was when R was pressed */
-        g_end = g_live_clock; g_replay_no++;
+        g_end = g_live_clock > CLOCK ? g_live_clock : CLOCK; if (g_end <= 0) g_end = 1; g_replay_no++;
+        st_backfill();
+        LOG("replay keys: replay %d starts at %d s, ends at %d s (store: %d entries from %d s)", g_replay_no, CLOCK / 1000, g_end / 1000, g_st_n, g_st_n ? g_st[0].t / 1000 : -1);
         *(volatile uint8_t *)(uintptr_t)0x55927a = 0;   /* P then R: start playing, not in GP3's pause */
         set_mode(M_PLAY); g_stepkey = -1; g_p_us = 0;
         if (!g_rc_idle) lap_jump(-1);                   /* start from the beginning of the lap, like F1 */
@@ -237,6 +346,7 @@ __attribute__((used)) void rc_gate(void) {
         }
     } else key_check();
     int32_t c = CLOCK, moved = c != g_last_clock;
+    if (!g_rc_idle && moved) { st_fill(c); rc_verify(c); }
     int lo, hi, have = !g_rc_idle && st_range(&lo, &hi);
     int jumped = 0;
     if (g_jump && have) { st_restore(g_jump - 1); g_jump = 0; c = CLOCK; jumped = 1; }   /* runs one step below, so the picture follows */
@@ -314,7 +424,8 @@ __attribute__((naked)) static void rc_read_stub(void) {
    snapshot right before, the same point where the replay reads it back */
 __attribute__((used)) uint32_t g_rc_rec __asm__("gp3_rc_rec") = 0x403c41;
 __attribute__((used)) void rc_live(void) __asm__("gp3_rc_live");
-__attribute__((used)) void rc_live(void) { if (g_on && !INREPLAY) st_live(CLOCK); }
+/* every live step (the race running): where the replay will end if R is pressed now (also without P first) */
+__attribute__((used)) void rc_live(void) { if (g_on && !INREPLAY) { g_live_clock = CLOCK; st_live(g_live_clock); } }
 __attribute__((naked)) static void rc_rec_stub(void) {
     __asm__ volatile("pushal\n call gp3_rc_live\n popal\n jmp *gp3_rc_rec\n");
 }
@@ -337,7 +448,10 @@ __attribute__((naked)) static void rc_step_stub(void) {
 
 /* GP3 draws nothing in a held frame but still flips: keep showing the last picture instead of
    rotating to the older back buffer (which made slow motion flicker) */
-int replayctl_held_frame(void) { return g_on && !g_rc_run && INREPLAY; }
+int replayctl_held_frame(void) {
+    if (g_on && !INREPLAY) g_live_clock = CLOCK;   /* also when the race stands still (just loaded): the replay ends here */
+    return g_on && !g_rc_run && INREPLAY;
+}
 
 int replayctl_active(void) { return g_on && INREPLAY && rt_now_us() - g_last_gate_us < 500000; }
 
@@ -347,13 +461,22 @@ int replayctl_active(void) { return g_on && INREPLAY && rt_now_us() - g_last_gat
 int plat_key_held(int vk) __attribute__((weak));
 int plat_key_poll(int vk) __attribute__((weak));   /* bit 0 down now, bit 1 pressed since the last call */
 static int key_held(int vk) { return plat_key_held ? plat_key_held(vk) : -1; }
+/* our keys: 0..8 = F1..F9, 9 = Shift+F1 (start of the race), 10 = Shift+F2 (where the race was paused) */
+static const int key_vk[11] = { 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x70, 0x71 };
+static const int key_li[11] = { 1, 2, 4, 5, 6, 7, 8, 9, 10, 0, 3 };   /* place in the legend: ⇧F1 F1 F2 ⇧F2 F3 .. F9 */
+static int key_index(int vk) { for (int f = 0; f < 9; f++) if (key_vk[f] == vk) return f; return -1; }
+extern uint8_t g_keystate[256] __attribute__((weak));
+static int shift_down(void) {
+    if (plat_key_held) return plat_key_held(0x10) > 0;
+    return &g_keystate[0] && ((g_keystate[0x10] | g_keystate[0xa0] | g_keystate[0xa1]) & 0x80);
+}
 static void key_release(int f) {
     g_keys_down &= ~(1 << f);
     if ((f == 3 && g_mode == M_SLOW) || (f == 4 && g_mode == M_REW) || (f == 7 && g_mode == M_FF)) set_mode(g_ret_mode);
     if (f == 5 || f == 6) g_rep = 0;
 }
 static void key_check(void) {   /* release what is no longer held */
-    for (int f = 0; f < 9; f++) if ((g_keys_down & (1 << f)) && key_held(0x70 + f) == 0) key_release(f);
+    for (int f = 0; f < 11; f++) if ((g_keys_down & (1 << f)) && key_held(key_vk[f]) == 0) key_release(f);
     if ((g_keys_down & 0x10000) && key_held('P') == 0) g_keys_down &= ~0x10000;
 }
 static void lap_jump(int dir) {
@@ -366,7 +489,7 @@ static void lap_jump(int dir) {
 }
 int replayctl_key(int vk, int down) {
     if (!replayctl_active()) return 0;
-    if (g_polling && ((vk >= 0x70 && vk <= 0x78) || vk == 'P')) return 1;   /* read by polling instead */
+    if (g_polling && (key_index(vk) >= 0 || vk == 'P')) return 1;   /* read by polling instead */
     return key_event(vk, down);
 }
 static int key_event(int vk, int down) {
@@ -378,9 +501,11 @@ static int key_event(int vk, int down) {
         if (!down) g_keys_down &= ~0x10000;
         return 1;
     }
-    if (vk < 0x70 || vk > 0x78) return 0;
-    int f = vk - 0x70, bit = 1 << f;   /* 0 = F1 */
-    if (!down) { key_release(f); return 1; }
+    int f = key_index(vk);   /* 0 = F1 */
+    if (f < 0) return 0;
+    if (!down) { key_release(f); if (f < 2) key_release(9 + f); return 1; }
+    if (f < 2 && shift_down()) f += 9;
+    int bit = 1 << f;
     if ((g_keys_down & bit) && key_held(vk) != 0) return 1;   /* key repeat */
     g_keys_down |= bit;
     g_flash = f; g_flash_until = rt_now_us() + 350000;
@@ -396,6 +521,11 @@ static int key_event(int vk, int down) {
     case 6: if (g_mode != M_PAUSE) set_mode(M_PAUSE); else g_steps++; g_rep = 1; g_frames = 0; break;
     case 7: g_ret_mode = base; set_mode(M_FF); break;
     case 8: g_legend = !g_legend; break;
+    case 9: case 10: {   /* the whole way back / forward; End stops there, paused */
+        int lo, hi; if (!st_range(&lo, &hi)) { set_mode(f == 9 ? M_REW : M_FF); break; }
+        g_jump = (f == 9 ? lo : hi) + 1;
+        if (f == 10) set_mode(M_PAUSE);
+        break; }
     }
     return 1;
 }
@@ -413,7 +543,7 @@ const uint32_t *replayctl_legend(int *w, int *h, int *scale) {
     if (g_flash >= 0 && rt_now_us() < g_flash_until) lit = g_flash;
     if (lit != built) {
         for (int y = 0; y < RL_H; y++) for (int x = 0; x < RL_W; x++) {
-            int i = y * RL_W + x, on = lit >= 0 && x >= rl_item[lit][0] && x <= rl_item[lit][1];
+            int i = y * RL_W + x, on = lit >= 0 && x >= rl_item[key_li[lit]][0] && x <= rl_item[key_li[lit]][1];
             unsigned bx = rl_box[i], t = rl_txt[i];
             if (bx < 128) { img[i] = 0; continue; }
             unsigned br = on ? 0xd0 : 0x16, bg = on ? 0x9a : 0x1a, bb = on ? 0x10 : 0x22;      /* box: dark, lit item amber */
@@ -450,5 +580,8 @@ void gp3_replay_keys(int legend) {
     uint8_t *s3 = (uint8_t *)(uintptr_t)0x4061d8;
     if (!memcmp(s3, "\xe8\x48\xeb\x00\x00", 5)) { rel = (int32_t)((uintptr_t)rc_idle_stub - (uintptr_t)(s3 + 5)); memcpy(c + 1, &rel, 4); plat_patch_code(s3, c, 5); }
     g_on = 1; g_legend = legend;
-    LOG("replay keys: on (F1..F9 like GP3 2000: laps, play/pause, slow, rewind, steps, fast forward%s)", legend ? ", legend on screen" : "");
+#ifndef GP3_WIN
+    if (getenv("GP3_RC_FORGET")) g_forget_at = atoi(getenv("GP3_RC_FORGET"));
+#endif
+    LOG("replay keys: on (F1..F9 like GP3 2000: laps, play/pause, slow, rewind, steps, fast forward; Shift+F1 / Shift+F2 start / end%s)", legend ? ", legend on screen" : "");
 }

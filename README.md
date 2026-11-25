@@ -14,13 +14,13 @@ No Windows, uma `ddraw.dll` específica para esses jogos implementa o caminho gr
 
 ## Download
 
-Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.2.0-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
+Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.2.1-Windows.zip** da versão publicada. Os links automáticos **Source code (zip)** e **Source code (tar.gz)** são para desenvolvimento e não incluem a DLL pronta.
 
 ## Estado do projeto
 
 | Componente | Estado deste material |
 | --- | --- |
-| Windows | DLL 1.2.0 fornecida no pacote da comunidade |
+| Windows | DLL 1.2.1 fornecida no pacote da comunidade |
 | Jogos reconhecidos pelo código | GP3 1.13 e GP3 2000; outras builds podem ter recursos específicos desativados |
 | Sistemas alvo | Windows 10 e 11; matriz de testes comunitários ainda em construção |
 | Escopo | Somente Windows; a versão Linux é o [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), em repositório próprio |
@@ -38,6 +38,7 @@ Abra **Releases**, à direita desta página, e baixe o arquivo **GP3RT-1.2.0-Win
 - Correção 1.0.2 para o GP3 / GP3 2000 que fechava sozinho ao entrar na pista.
 - Correção 1.0.3 para pistas muito detalhadas (ex.: pistas de 1998 do Belini): carros só com as rodas, polígonos cinza e fechamento com a câmera de TV afastada. O limite de geometria por quadro do GP3 passou de 2.999 para 16.000 (`edge_fix=1`).
 - 1.1.0: bem mais leve para o processador (o desenho do quadro vai para a placa de uma vez); texturas mais rápidas em PCs sem placa dedicada; correção do GP3 2000 fechando em corridas longas por um erro do próprio som 3D (`sound_lock_fix=1`); foco devolvido ao jogo quando outra janela o rouba escondida atrás dele; configurador que abre a pasta do jogo e lê o gp3rt.ini e o gp3rt.log.
+- 1.2.1: o replay volta até a largada também depois de carregar uma corrida salva (usa as fotos que o GP3Replay.dll guarda no save); R logo depois de carregar, sem P, não deixa mais o replay preso voltando; teclas novas Shift+F1 (largada) e Shift+F2 (ponto em que a corrida parou). Relatado por Stephan Séguin.
 - 1.2.0: **GP3Replay.dll** (GP3 1.13), o replay da corrida inteira sem executável extra, substituindo o GP3 Video (gp3v.exe), com inspiração no trabalho do Rafa; teclas do replay iguais às do GP3 2000 (F1 a F9, legenda na tela), com voltar e avançar suaves e o replay idêntico à corrida; spray e fumaça que não somem mais depois de voltar o replay; replay de até 2 horas no GP3 2000 (o jogo parava em 1h30). Opções `gp3replay`, `replay_keys`, `replay_legend`, `replay_fx_fix` e `replay_2h`.
 
 Os recursos foram identificados no código e nos materiais do pacote. Desempenho e compatibilidade dependem de hardware, executável, pista e mods; não há promessa de PO ou FPS específicos.
@@ -88,13 +89,13 @@ On Windows, a game-specific `ddraw.dll` implements the legacy graphics functiona
 
 ## Download
 
-Open **Releases** on the right side of this page and download **GP3RT-1.2.0-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
+Open **Releases** on the right side of this page and download **GP3RT-1.2.1-Windows.zip** from the published release. The automatically generated **Source code (zip)** and **Source code (tar.gz)** archives are intended for development and do not include the compiled DLL.
 
 ## Project status
 
 | Component | Current status |
 | --- | --- |
-| Windows | DLL version 1.2.0 supplied in the community package |
+| Windows | DLL version 1.2.1 supplied in the community package |
 | Game builds recognized by the code | GP3 1.13 and GP3 2000; specific features may be disabled on other builds |
 | Target operating systems | Windows 10 and 11; the community testing matrix is still being developed |
 | Scope | Windows only; the Linux version is [GP3 Reborn](https://github.com/rods1182/gp3reborn-linux), in its own repository |
@@ -112,6 +113,7 @@ Open **Releases** on the right side of this page and download **GP3RT-1.2.0-Wind
 - Version 1.0.2 fix for GP3 / GP3 2000 closing by itself when entering the track.
 - Version 1.0.3 fix for very detailed tracks (e.g. Belini's 1998 tracks): cars reduced to wheels, grey polygons and crashes with the TV camera pulled back. GP3's per-frame geometry limit was raised from 2,999 to 16,000 (`edge_fix=1`).
 - 1.1.0: much lighter on the processor (each frame's drawing goes to the GPU in one go); faster textures on PCs without a dedicated GPU; fix for GP3 2000 closing in long races because of a bug in its own 3D sound (`sound_lock_fix=1`); focus returned to the game when a hidden window steals it; configurator that opens the game folder and reads gp3rt.ini and gp3rt.log.
+- 1.2.1: the replay goes back to the start also after loading a saved race (it uses the snapshots GP3Replay.dll keeps in the save); R right after loading, without P, no longer leaves the replay stuck rewinding; new keys Shift+F1 (start of the race) and Shift+F2 (where the race stopped). Reported by Stephan Séguin.
 - 1.2.0: **GP3Replay.dll** (GP3 1.13), a whole-race replay with no extra executable, replacing GP3 Video (gp3v.exe) and inspired by Rafa's work; GP3 2000-style replay keys (F1 to F9, on-screen legend) with smooth rewind and fast forward and a replay identical to the race; rain spray and smoke no longer vanish after rewinding; GP3 2000 replays up to 2 hours (the game stopped at 1h30). Options `gp3replay`, `replay_keys`, `replay_legend`, `replay_fx_fix` and `replay_2h`.
 
 These features were identified in the code and package documentation. Performance and compatibility depend on hardware, executable build, track, and mods; specific PO or FPS values are not guaranteed.
